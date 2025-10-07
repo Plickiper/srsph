@@ -1,0 +1,9 @@
+com\pecenio\businessmodel\entity\AuditLog$Severity.class
+com\pecenio\businessmodel\entity\AuditLog$ActionType.class
+com\pecenio\businessmodel\entity\OrderItem.class
+com\pecenio\businessmodel\entity\Product.class
+com\pecenio\businessmodel\entity\CartItem.class
+com\pecenio\businessmodel\entity\Order.class
+com\pecenio\businessmodel\entity\User.class
+com\pecenio\businessmodel\entity\Cart.class
+com\pecenio\businessmodel\entity\AuditLog.class

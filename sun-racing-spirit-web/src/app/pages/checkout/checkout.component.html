@@ -1,0 +1,86 @@
+<div class="checkout-page">
+  <div class="container">
+
+    <!-- Full-width Delivery Address banner -->
+    <div class="address-section address-banner">
+          <div class="section-header">
+            <div class="header-left">
+              <span class="pin">📍</span>
+              <h2>Delivery Address</h2>
+            </div>
+            <div class="header-right">
+              <span class="badge">Default</span>
+              <a class="link" routerLink="/profile">Change</a>
+            </div>
+          </div>
+          <div class="address-body">
+            <div class="address-grid">
+              <div class="left">
+                <div class="recipient-line">
+                  <span class="name">{{ delivery.fullName || (user?.firstName + ' ' + user?.lastName) }}</span>
+                  <span class="phone">{{ delivery.phoneNumber }}</span>
+                </div>
+              </div>
+              <div class="right">
+                <div class="full-address">
+                  {{ delivery.address }}, {{ delivery.city }}, {{ delivery.state }}, {{ delivery.country }} {{ delivery.postalCode }}
+                </div>
+              </div>
+            </div>
+          </div>
+    </div>
+
+    <div class="checkout-content modern" *ngIf="items.length > 0">
+      <div class="main-column">
+
+        <!-- Order Items -->
+        <div class="order-section">
+          <h2>Products Ordered</h2>
+        <div class="order-items">
+          <div class="order-item" *ngFor="let item of items">
+            <div class="item-image">
+              <img [src]="(item.product && item.product.imageUrl) ? item.product.imageUrl : placeholderImg" alt=""/>
+            </div>
+            <div class="item-info">
+              <div class="name">{{ item.product.name || 'Product' }}</div>
+              <div class="variant">Variant: {{ item.size || 'Universal' }}</div>
+              <div class="qty">Qty: {{ item.quantity }}</div>
+            </div>
+            <div class="item-price">₱{{ (item.price * item.quantity) | number:'1.0-0' }}</div>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- Right column: payment method and order summary -->
+      <div class="right-column">
+        <div class="payment-section">
+          <h2>Payment Method</h2>
+          <div class="payment-methods">
+            <label class="payment-option">
+              <input type="radio" name="pm" [(ngModel)]="paymentMethod" [value]="'COD'" />
+              <span class="indicator"></span>
+              <span class="text">Cash on Delivery</span>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="pm" [(ngModel)]="paymentMethod" [value]="'GCASH'" />
+              <span class="indicator"></span>
+              <span class="text">GCash</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="summary-section">
+          <h2>Order Summary</h2>
+        <div class="row"><span>Items Total</span><span>₱{{ itemsTotal | number:'1.0-0' }}</span></div>
+        <div class="row"><span>Shipping</span><span *ngIf="shippingFee === 0; else ship">Free</span></div>
+        <div class="row" *ngIf="paymentMethod"><span>Payment</span><span>{{ paymentMethodLabel }}</span></div>
+        <ng-template #ship><span>₱{{ shippingFee | number:'1.0-0' }}</span></ng-template>
+        <div class="row total"><span>Total</span><span>₱{{ grandTotal | number:'1.0-0' }}</span></div>
+
+        <button class="btn btn-primary" [attr.aria-disabled]="!paymentMethod" [disabled]="!paymentMethod" (click)="placeOrder()">Place Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

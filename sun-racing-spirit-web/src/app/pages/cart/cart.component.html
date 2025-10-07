@@ -1,0 +1,162 @@
+<div class="cart-page">
+  <div class="container">
+
+    <div class="cart-content" *ngIf="cartItems.length > 0; else emptyCart">
+      <!-- Cart Items -->
+      <div class="cart-items">
+        <!-- Selection Controls -->
+        <div class="selection-controls">
+          <div class="select-all">
+            <input type="checkbox" 
+                   [checked]="areAllItemsSelected()" 
+                   [indeterminate]="isIndeterminate()"
+                   (change)="onSelectAllChange()">
+            <label>Select All Items</label>
+          </div>
+          <div class="selected-count" *ngIf="selectedItemsQuantity > 0">
+            {{ selectedItemsQuantity }} item(s) selected
+          </div>
+        </div>
+
+        <div class="cart-item" 
+             *ngFor="let item of cartItems; trackBy: trackByCartItem"
+             [class.has-open-dropdown]="showVariantDropdown[item.productId + '-' + item.size]">
+          <!-- Selection Checkbox -->
+          <div class="item-selection">
+            <input type="checkbox" 
+                   [checked]="item.selected || false" 
+                   (change)="toggleItemSelection(item)">
+          </div>
+
+          <div class="item-image">
+            <img [src]="(item.product && item.product.imageUrl) ? item.product.imageUrl : defaultProductImage" [alt]="(item.product && item.product.name) || 'Product'">
+          </div>
+          
+          <div class="item-details">
+            <h3 class="item-name">{{ (item.product && item.product.name) || 'Product' }}</h3>
+            <p class="item-brand">{{ (item.product && item.product.brand) || '' }}</p>
+            
+            <!-- Variant Display with Edit Option -->
+            <div class="item-variant">
+              <span class="variant-label">Variant:</span>
+              <div class="variant-selector" *ngIf="item.product && hasVariants(item.product); else noVariants">
+                <button class="variant-button" 
+                        [class.disabled]="(getCompatibilityModels(item.product).length === 1)"
+                        [attr.aria-disabled]="getCompatibilityModels(item.product).length === 1"
+                        (click)="onVariantButtonClick(item, $event)">
+                  {{ formatVariantLabel(item.size) }}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6,9 12,15 18,9"></polyline>
+                  </svg>
+                </button>
+                
+                <!-- Variant Dropdown -->
+                <div class="variant-dropdown" 
+                     *ngIf="showVariantDropdown[item.productId + '-' + item.size] && getCompatibilityModels(item.product).length > 1"
+                     (click)="$event.stopPropagation()"
+                     (mouseenter)="$event.stopPropagation()"
+                     (mousemove)="$event.stopPropagation()">
+                  <div class="variant-option" 
+                       *ngFor="let variant of (item.product ? getCompatibilityModels(item.product) : [])"
+                       (click)="item.product && !isVariantOutOfStock(item.product, variant) && updateVariant(item, variant)"
+                       [class.selected]="variant === item.size"
+                       [class.out-of-stock]="item.product && isVariantOutOfStock(item.product, variant)"
+                       [class.disabled]="item.product && isVariantOutOfStock(item.product, variant)">
+                    <span class="variant-name">{{ formatVariantLabel(variant) }}</span>
+                    <span class="out-of-stock-label" *ngIf="item.product && isVariantOutOfStock(item.product, variant)">Out of Stock</span>
+                    <span class="selected-icon" *ngIf="variant === item.size && item.product && !isVariantOutOfStock(item.product, variant)">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20,6 9,17 4,12"></polyline>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <ng-template #noVariants>
+                <span class="variant-text">{{ formatVariantLabel(item.size) }}</span>
+              </ng-template>
+            </div>
+          </div>
+
+          <div class="item-quantity">
+            <button class="quantity-btn" (click)="updateQuantity(item, item.quantity - 1)">-</button>
+            <span class="quantity">{{ item.quantity }}</span>
+            <button class="quantity-btn" (click)="updateQuantity(item, item.quantity + 1)">+</button>
+          </div>
+
+          <div class="item-total">
+            ₱{{ ((item.product && item.product.price) || item.price) * item.quantity | number:'1.0-0' }}
+          </div>
+
+          <button class="remove-btn" (click)="removeItem(item)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3,6 5,6 21,6"></polyline>
+              <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cart Summary -->
+      <div class="cart-summary">
+        <div class="summary-card">
+          <h3>Order Summary</h3>
+          
+          <!-- Show summary only when items are selected -->
+          <div *ngIf="selectedItemsQuantity > 0; else noSelection">
+            <div class="summary-row">
+              <span>Selected Items ({{ selectedItemsQuantity }})</span>
+              <span>₱{{ selectedItemsTotal | number:'1.0-0' }}</span>
+            </div>
+            
+            <div class="summary-row">
+              <span>Shipping</span>
+              <span *ngIf="shippingFee === 0; else shippingFeeDisplay">Free</span>
+              <ng-template #shippingFeeDisplay>
+                <span>₱{{ shippingFee | number:'1.0-0' }}</span>
+              </ng-template>
+            </div>
+            
+            <div class="summary-row total">
+              <span>Total</span>
+              <span>₱{{ totalWithShipping | number:'1.0-0' }}</span>
+            </div>
+            
+            <button class="btn btn-primary checkout-btn" (click)="proceedToCheckout()">
+              Proceed to Checkout
+            </button>
+          </div>
+          
+          <!-- No selection - completely blank -->
+          <ng-template #noSelection>
+            <div class="no-selection-message">
+              <button class="btn btn-primary checkout-btn" disabled>
+                Select Items to Checkout
+              </button>
+            </div>
+          </ng-template>
+          
+          <a routerLink="/products" class="continue-shopping">
+            Continue Shopping
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty Cart -->
+    <ng-template #emptyCart>
+      <div class="empty-cart">
+        <div class="empty-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <path d="M9 22C9.55228 22 10 21.5523 10 21C10 20.4477 9.55228 20 9 20C8.44772 20 8 20.4477 8 21C8 21.5523 8.44772 22 9 22Z"></path>
+            <path d="M20 22C20.5523 22 21 21.5523 21 21C21 20.4477 20.5523 20 20 20C19.4477 20 19 20.4477 19 21C19 21.5523 19.4477 22 20 22Z"></path>
+            <path d="M1 1H5L7.68 14.39C7.77144 14.8504 8.02191 15.264 8.38755 15.5583C8.75318 15.8526 9.2107 16.009 9.68 16H19.4C19.8693 16.009 20.3268 15.8526 20.6925 15.5583C21.0581 15.264 21.3086 14.8504 21.4 14.39L23 6H6"></path>
+          </svg>
+        </div>
+        <h3>Your cart is empty</h3>
+        <p>Looks like you haven't added any items to your cart yet.</p>
+        <a routerLink="/products" class="btn btn-primary">Start Shopping</a>
+      </div>
+    </ng-template>
+  </div>
+</div>

@@ -1,0 +1,16 @@
+com\pecenio\datamodel\repository\OrderRepository.class
+com\pecenio\datamodel\entity\RatingEntity.class
+com\pecenio\datamodel\repository\ProductRepository.class
+com\pecenio\datamodel\repository\UserRepository.class
+com\pecenio\datamodel\repository\CartItemRepository.class
+com\pecenio\datamodel\repository\OrderItemRepository.class
+com\pecenio\datamodel\entity\CartEntity.class
+com\pecenio\datamodel\entity\OrderEntity.class
+com\pecenio\datamodel\entity\OrderEntity$OrderStatus.class
+com\pecenio\datamodel\repository\CartRepository.class
+com\pecenio\datamodel\entity\OrderItemEntity.class
+com\pecenio\datamodel\entity\ProductEntity.class
+com\pecenio\datamodel\entity\UserEntity.class
+com\pecenio\datamodel\entity\CartItemEntity.class
+com\pecenio\datamodel\repository\RatingRepository.class
+com\pecenio\datamodel\repository\AuditLogRepository.class

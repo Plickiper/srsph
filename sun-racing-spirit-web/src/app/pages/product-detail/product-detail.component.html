@@ -1,0 +1,274 @@
+<div class="product-detail-page">
+  <div class="container">
+    <div class="product-detail" *ngIf="product; else loading">
+      <!-- Main Product Section -->
+      <div class="product-main">
+        <!-- Left Side: Product Gallery -->
+        <div class="product-gallery">
+          <div class="main-image-container">
+            <img 
+              [src]="selectedImage || product.imageUrl || getPlaceholderImage()" 
+              [alt]="product.name" 
+              class="main-image"
+              (error)="onImageError($event)"
+            >
+          </div>
+          
+          <!-- Thumbnail Gallery -->
+          <div class="thumbnail-gallery" *ngIf="getAllImages().length > 1">
+            <div 
+              *ngFor="let image of getAllImages(); let i = index"
+              class="thumbnail-item"
+              [class.active]="selectedImage === image"
+              (click)="selectImage(image)"
+            >
+              <img [src]="image" [alt]="product.name + ' ' + (i + 1)" class="thumbnail-image">
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side: Product Info -->
+        <div class="product-info">
+          <!-- Product Title -->
+          <h1 class="product-title">{{ product.name }}</h1>
+
+          <!-- Rating & Sold -->
+          <div class="rating-sold">
+            <div class="rating">
+              <div class="stars">
+                <span *ngFor="let star of getStarArray(productRating); let i = index" 
+                      class="star" 
+                      [class.filled]="star === 1" 
+                      [class.half]="star === 0.5">★</span>
+              </div>
+              <span class="rating-value">{{ productRating | number:'1.1-1' }}</span>
+              <span class="review-count">{{ reviewCount }} reviews</span>
+            </div>
+            <div class="sold-count">{{ formatSoldCount(product.soldCount || 0) }} sold</div>
+          </div>
+
+          <!-- Price -->
+          <div class="price" *ngIf="!hasVariantPricing()">₱{{ product.price | number:'1.0-0' }}</div>
+          <div class="price" *ngIf="hasVariantPricing() && !isVariantSelected()">{{ getPriceRange() }}</div>
+          <div class="price" *ngIf="hasVariantPricing() && isVariantSelected()">₱{{ getCurrentPrice() | number:'1.0-0' }}</div>
+
+          <!-- Variant Selection -->
+          <div class="variant-section" *ngIf="product.compatibility">
+            <div class="variant-label">Variant</div>
+            
+            <!-- All variants as selectable buttons -->
+            <div class="variant-options">
+              <div 
+                *ngFor="let model of getCompatibilityModels()" 
+                class="variant-option"
+                [class.selected]="selectedVariant === model"
+                [class.locked]="isVariantLocked()"
+                [class.out-of-stock]="isVariantOutOfStock(model)"
+                [class.disabled]="isVariantOutOfStock(model)"
+                (click)="selectVariant(model)"
+              >
+                <span>{{ model }}</span>
+                <i class="fas fa-lock" *ngIf="isVariantLocked()"></i>
+                <i class="fas fa-times" *ngIf="isVariantOutOfStock(model)"></i>
+              </div>
+            </div>
+            
+          </div>
+
+          <!-- Quantity & Stock -->
+          <div class="quantity-section">
+            <div class="quantity-controls">
+              <button type="button" class="qty-btn" (click)="decreaseQuantity()" [disabled]="quantity <= 1">-</button>
+              <input 
+                type="number" 
+                [(ngModel)]="quantity" 
+                min="1" 
+                [max]="getCurrentStock()"
+                class="qty-input"
+                (change)="onQuantityChange()"
+              >
+              <button type="button" class="qty-btn" (click)="increaseQuantity()" [disabled]="quantity >= getCurrentStock()">+</button>
+            </div>
+            <div class="stock-info">{{ getCurrentStock() }} available</div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <button 
+              class="btn-add-cart" 
+              [class.disabled]="!isVariantSelected() || getCurrentStock() === 0"
+              (click)="addToCart()" 
+              [disabled]="!isVariantSelected() || getCurrentStock() === 0"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 22C9.55228 22 10 21.5523 10 21C10 20.4477 9.55228 20 9 20C8.44772 20 8 20.4477 8 21C8 21.5523 8.44772 22 9 22Z"></path>
+                <path d="M20 22C20.5523 22 21 21.5523 21 21C21 20.4477 20.5523 20 20 20C19.4477 20 19 20.4477 19 21C19 21.5523 19.4477 22 20 22Z"></path>
+                <path d="M1 1H5L7.68 14.39C7.77144 14.8504 8.02191 15.264 8.38755 15.5583C8.75318 15.8526 9.2107 16.009 9.68 16H19.4C19.8693 16.009 20.3268 15.8526 20.6925 15.5583C21.0581 15.264 21.3086 14.8504 21.4 14.39L23 6H6"></path>
+              </svg>
+              Add to Cart
+            </button>
+            <button 
+              class="btn-buy-now" 
+              [class.disabled]="!isVariantSelected() || getCurrentStock() === 0"
+              (click)="buyNow()" 
+              [disabled]="!isVariantSelected() || getCurrentStock() === 0"
+            >
+              Buy Now
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description & Specifications Card -->
+      <div class="description-specs-card">
+        <!-- Product Description -->
+        <div class="product-description-section">
+          <h3>Description</h3>
+          <p class="product-description">{{ product.description }}</p>
+        </div>
+
+        <!-- In the Box -->
+        <div class="detail-section" *ngIf="product.inTheBox">
+          <h3>What's in the Box</h3>
+          <div class="in-the-box-content">
+            <p>{{ product.inTheBox }}</p>
+          </div>
+        </div>
+
+        <!-- Specifications -->
+        <div class="specifications-section">
+          <h3>Specifications</h3>
+          <div class="specs-grid">
+            <div class="spec-item">
+              <span class="spec-label">Category:</span>
+              <span class="spec-value">{{ product.category }}</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Brand:</span>
+              <span class="spec-value">{{ product.brand }}</span>
+            </div>
+            <div class="spec-item" *ngIf="product.color">
+              <span class="spec-label">Color:</span>
+              <span class="spec-value">{{ product.color }}</span>
+            </div>
+            <div class="spec-item" *ngIf="product.size">
+              <span class="spec-label">Size:</span>
+              <span class="spec-value">{{ product.size }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Customer Reviews Section (Separate from Description) -->
+    <div class="reviews-section" *ngIf="ratings.length > 0">
+      <h3>Customer Reviews</h3>
+      <div class="reviews-list">
+        <div class="review-item" *ngFor="let rating of ratings">
+          <div class="review-header">
+            <div class="reviewer-info">
+              <div class="reviewer-avatar">
+                <div class="avatar-circle" *ngIf="!rating.avatarUrl || rating.avatarUrl === ''">
+                  {{ getInitials(rating.userName) }}
+                </div>
+                <img 
+                  *ngIf="rating.avatarUrl && rating.avatarUrl !== ''" 
+                  [src]="rating.avatarUrl" 
+                  [alt]="rating.userName"
+                  class="avatar-image"
+                  (error)="onAvatarError($event, rating)"
+                />
+              </div>
+              <div class="reviewer-details">
+                <div class="reviewer-info">
+                  <div class="reviewer-name">{{ rating.userName }}</div>
+                  <div class="review-date">{{ formatDate(rating.createdAt) }}</div>
+                </div>
+                <div class="review-variant" *ngIf="rating.allVariants && rating.allVariants.length > 0">
+                  <span class="variant-label">Variants:</span>
+                  <span class="variant-value" *ngFor="let variant of rating.allVariants; let isLast = last">
+                    {{ variant }}<span *ngIf="!isLast">, </span>
+                  </span>
+                  <span class="variant-count" *ngIf="rating.variantCount > 1">
+                    ({{ rating.variantCount }} variants in order)
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="review-rating">
+              <div class="stars">
+                <span *ngFor="let star of getStarArray(rating.rating); let i = index" 
+                      class="star" 
+                      [class.filled]="star === 1" 
+                      [class.half]="star === 0.5">★</span>
+              </div>
+              <span class="rating-value">{{ rating.rating }}/5</span>
+            </div>
+          </div>
+              <div class="review-comment" *ngIf="rating.comment">
+                <p>{{ rating.comment }}</p>
+              </div>
+              <div class="review-image" *ngIf="rating.reviewImageUrl">
+                <!-- Thumbnail mode (default) -->
+                <div class="review-image-thumbnail" 
+                     *ngIf="!rating.isImageExpanded" 
+                     (click)="toggleReviewImageExpanded(rating)">
+                  <img 
+                    [src]="getReviewImageUrl(rating.reviewImageUrl)" 
+                    [alt]="'Review image by ' + rating.userName"
+                    class="thumbnail-image"
+                    (error)="onReviewImageError($event, rating)"
+                  />
+                  <div class="thumbnail-overlay">
+                    <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                    </svg>
+                    <span class="expand-text">Click to expand</span>
+                  </div>
+                </div>
+                
+                <!-- Expanded mode -->
+                <div class="review-image-expanded" 
+                     *ngIf="rating.isImageExpanded" 
+                     (click)="toggleReviewImageExpanded(rating)">
+                  <img 
+                    [src]="getReviewImageUrl(rating.reviewImageUrl)" 
+                    [alt]="'Review image by ' + rating.userName"
+                    class="expanded-image"
+                    (error)="onReviewImageError($event, rating)"
+                  />
+                  <div class="collapse-overlay">
+                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3"/>
+                    </svg>
+                    <span class="collapse-text">Click to collapse</span>
+                  </div>
+                </div>
+              </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <ng-template #loading>
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Loading product details...</p>
+      </div>
+    </ng-template>
+
+    <!-- Image Modal -->
+    <div class="image-modal" *ngIf="showImageModal" (click)="closeImageModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <button class="close-btn" (click)="closeImageModal()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <img [src]="product?.imageUrl" [alt]="product?.name" class="modal-image">
+      </div>
+    </div>
+  </div>
+</div>

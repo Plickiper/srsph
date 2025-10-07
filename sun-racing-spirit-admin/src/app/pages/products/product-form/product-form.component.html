@@ -1,0 +1,510 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>{{ isEditMode ? 'Edit Product' : 'Add New Product' }}</h1>
+    <p *ngIf="!isEditMode">Add a new Sun Racing Spirit aftermarket part to your inventory</p>
+    <button class="btn btn-secondary" (click)="goBack()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 12H5M12 19l-7-7 7-7"></path>
+      </svg>
+      {{ isEditMode ? 'Back' : 'Back to Products' }}
+    </button>
+  </div>
+
+  <form (ngSubmit)="onSubmit()" class="product-form">
+    <!-- Product Overview -->
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+        </svg>
+        <h2>Product Overview</h2>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="name">Product Name *</label>
+          <input 
+            type="text" 
+            id="name" 
+            name="name" 
+            [(ngModel)]="product.name" 
+            required 
+            class="form-control"
+            placeholder="e.g., CVT Kit for Yamaha NMAX">
+        </div>
+
+        <div class="form-group">
+          <label for="partNumber">SKU / Product Code *</label>
+          <input 
+            type="text" 
+            id="partNumber" 
+            name="partNumber" 
+            [(ngModel)]="product.partNumber" 
+            required 
+            class="form-control"
+            placeholder="e.g., SRS-CVT-NMAX-001">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="category">Category *</label>
+          <div class="custom-select-wrapper" [class.open]="isDropdownOpen">
+            <select 
+              id="category" 
+              name="category" 
+              [(ngModel)]="product.category" 
+              required 
+              class="custom-select"
+              (focus)="isDropdownOpen = true"
+              (blur)="isDropdownOpen = false"
+              (change)="isDropdownOpen = false">
+              <option value="">Select Category</option>
+              <option value="Backplate">Backplate</option>
+              <option value="Brake Shoe">Brake Shoe</option>
+              <option value="Bushing">Bushing</option>
+              <option value="Center Spring">Center Spring</option>
+              <option value="Clutch Bell">Clutch Bell</option>
+              <option value="Clutch Lining Assembly">Clutch Lining Assembly</option>
+              <option value="Clutch Shoe">Clutch Shoe</option>
+              <option value="Clutch Spring">Clutch Spring</option>
+              <option value="CVT Set">CVT Set</option>
+              <option value="Drive Face">Drive Face</option>
+              <option value="Engine Oil">Engine Oil</option>
+              <option value="Exhaust Pipe">Exhaust Pipe</option>
+              <option value="Flyball">Flyball</option>
+              <option value="Gear Oil">Gear Oil</option>
+              <option value="Pulley Set">Pulley Set</option>
+              <option value="Slider">Slider</option>
+              <option value="Torque Drive">Torque Drive</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="brand">Brand *</label>
+          <input 
+            type="text" 
+            id="brand" 
+            name="brand" 
+            [(ngModel)]="product.brand" 
+            required 
+            class="form-control"
+            placeholder="Sun Racing">
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Details -->
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14,2 14,8 20,8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10,9 9,9 8,9"></polyline>
+        </svg>
+        <h2>Product Details</h2>
+      </div>
+      
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea 
+          id="description" 
+          name="description" 
+          [(ngModel)]="product.description" 
+          class="form-control form-textarea"
+          rows="6"
+          placeholder="Detailed product description, features, and benefits..."></textarea>
+      </div>
+
+      <!-- Product Images -->
+      <div class="product-images-section">
+        <div class="image-upload-grid">
+          <!-- Main Product Image -->
+          <div class="main-image-container">
+            <div class="main-image-wrapper">
+              <label class="form-label">Main Product Image *</label>
+              <!-- Current Image Display -->
+              <div *ngIf="product.imageUrl && product.imageUrl.trim() !== ''" class="main-image-item">
+                <img [src]="product.imageUrl" [alt]="product.name" class="product-image">
+                <div class="image-overlay">
+                  <button type="button" class="btn btn-sm btn-primary" (click)="triggerMainFileInput()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-4-4-4 4M13 4v12"></path>
+                    </svg>
+                    Replace
+                  </button>
+                  <button type="button" class="btn btn-sm btn-danger" (click)="removeCurrentImage()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              <!-- Upload Loading State -->
+              <div *ngIf="uploading" class="upload-loading">
+                <div class="loading-spinner"></div>
+                <p>Uploading... {{uploadProgress}}%</p>
+              </div>
+
+              <!-- Upload Placeholder -->
+              <div 
+                *ngIf="!product.imageUrl || product.imageUrl === null || product.imageUrl === undefined || product.imageUrl.trim() === ''" 
+                class="main-image-placeholder"
+                [class.drag-over]="isDragOver"
+                (click)="triggerMainFileInput()"
+                (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)"
+                (drop)="onDrop($event)">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                  <circle cx="12" cy="13" r="3"></circle>
+                </svg>
+                <p>Click to upload main image</p>
+                <p class="upload-hint">JPG, PNG, GIF (max 10MB)</p>
+                <input 
+                  #mainFileInput
+                  type="file" 
+                  id="mainImage" 
+                  accept="image/*" 
+                  (change)="onFileSelected($event)"
+                  class="file-input">
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Product Images -->
+          <div class="additional-images-container">
+            <label class="form-label">Current Additional Images ({{ getTotalAdditionalImages() }}/3)</label>
+            <div class="additional-images-grid">
+              <!-- Existing Images -->
+              <div 
+                *ngFor="let image of product.images; let i = index; trackBy: trackByImageIndex" 
+                class="image-item">
+                <img [src]="image" [alt]="'Additional Image ' + (i + 1)" class="product-image">
+                <div class="image-overlay">
+                  <button type="button" class="btn btn-secondary btn-sm" (click)="replaceAdditionalImage(i)">
+                    Replace
+                  </button>
+                  <button type="button" class="btn btn-danger btn-sm" (click)="removeAdditionalImage(i)">
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              <!-- New Images to Add -->
+              <div *ngFor="let file of selectedAdditionalFiles; let i = index; trackBy: trackByFileIndex" class="image-item new-image">
+                <img [src]="getFilePreview(file)" [alt]="file.name" class="product-image">
+                <span class="new-badge">NEW</span>
+                <div class="image-overlay">
+                  <button type="button" class="btn btn-danger btn-sm" (click)="removeAdditionalFile(i)">
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              <!-- Add New Image Placeholder -->
+              <div class="add-image-placeholder" *ngIf="getTotalAdditionalImages() < 3" (click)="triggerAdditionalFileInput()">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg>
+                <span>Add Image</span>
+                <input 
+                  #additionalFileInput
+                  type="file" 
+                  accept="image/*" 
+                  multiple 
+                  (change)="onAdditionalFilesSelected($event)"
+                  class="file-input">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model Compatibility -->
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+        <h2>Model Compatibility</h2>
+      </div>
+      <div class="form-group">
+        <label>Model Compatibility</label>
+        
+        <!-- Selected Models Display -->
+        <div class="selected-models-display" *ngIf="selectedCompatibilityModels.length > 0">
+          <span class="selected-models-label">Selected Models: {{ selectedCompatibilityModels.length }} model(s)</span>
+          <div class="selected-models-pills">
+            <span *ngFor="let model of selectedCompatibilityModels" class="model-pill">
+              {{ model }}
+              <button type="button" class="remove-model-btn" (click)="removeModel(model)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12"></path>
+                </svg>
+              </button>
+            </span>
+          </div>
+        </div>
+
+        <!-- Compatibility Dropdown -->
+        <div class="compatibility-dropdown-container" #compatibilityDropdown>
+          <div class="compatibility-dropdown-trigger" (click)="toggleCompatibilityDropdown()">
+            <span>Select Compatible Models</span>
+            <svg class="dropdown-icon" [class.rotated]="isCompatibilityOpen" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"></path>
+            </svg>
+          </div>
+          
+          <div class="compatibility-dropdown" [class.open]="isCompatibilityOpen">
+            <div class="dropdown-header">
+              <h4>Select Compatible Models</h4>
+            </div>
+            
+            <div class="brands-container">
+              <div class="brand-section" *ngFor="let brand of compatibilityBrands">
+                <div class="brand-header">
+                  <div class="brand-info" (click)="toggleBrandExpansion(brand.name)">
+                    <h3>{{ brand.name }}</h3>
+                    <span class="brand-count">{{ getSelectedModelsForBrand(brand.name).length }}/{{ brand.models.length }}</span>
+                  </div>
+                  <div class="brand-actions">
+                    <button type="button" class="btn btn-xs btn-secondary" (click)="selectAllModelsForBrand(brand.name); $event.stopPropagation()">Select All</button>
+                    <button type="button" class="btn btn-xs btn-secondary" (click)="clearAllModelsForBrand(brand.name); $event.stopPropagation()">Clear All</button>
+                    <svg class="brand-chevron" [class.rotated]="isBrandExpanded(brand.name)" (click)="toggleBrandExpansion(brand.name)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                  </div>
+                </div>
+                
+                <div class="brand-models" [class.expanded]="isBrandExpanded(brand.name)">
+                  <label *ngFor="let model of brand.models" class="model-checkbox">
+                    <input 
+                      type="checkbox" 
+                      [checked]="selectedCompatibilityModels.includes(model)"
+                      (change)="toggleCompatibilityModel(model)">
+                    <span class="model-name">{{ model }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing & Stock -->
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 1v22M17 5H7M17 19H7"></path>
+        </svg>
+        <h2>Pricing & Stock</h2>
+      </div>
+      <!-- Automatic Pricing Mode Display -->
+      <div class="pricing-mode-info" *ngIf="selectedCompatibilityModels.length > 0">
+        <div class="pricing-mode-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M3 12h18M3 18h18" *ngIf="useVariantPricing"></path>
+            <path d="M9 12l2 2 4-4" *ngIf="!useVariantPricing"></path>
+          </svg>
+          <div>
+            <h4>{{ useVariantPricing ? 'Variant-Specific Pricing' : 'Single Price & Stock' }}</h4>
+            <p>{{ useVariantPricing ? 'Set different prices and stock quantities for each compatible model.' : 'Set a single price and stock quantity for all compatible models.' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" *ngIf="!useVariantPricing">
+        <div class="form-group">
+          <label for="price">Price (₱) *</label>
+          <input 
+            type="number" 
+            id="price" 
+            name="price" 
+            [(ngModel)]="product.price" 
+            required 
+            class="form-control"
+            placeholder="0.00"
+            step="0.01"
+            min="0">
+        </div>
+        <div class="form-group">
+          <label for="stockQuantity">Stock Quantity *</label>
+          <div class="stock-input-container">
+            <input 
+              type="number" 
+              id="stockQuantity" 
+              name="stockQuantity" 
+              [(ngModel)]="product.stockQuantity" 
+              required 
+              class="form-control"
+              [class.low-stock]="getStockStatus(product.stockQuantity) === 'low'"
+              [class.out-of-stock]="getStockStatus(product.stockQuantity) === 'out'"
+              [class.good-stock]="getStockStatus(product.stockQuantity) === 'good'"
+              placeholder="0"
+              min="0">
+            <div class="stock-status-indicator" 
+                 [class.low-stock]="getStockStatus(product.stockQuantity) === 'low'"
+                 [class.out-of-stock]="getStockStatus(product.stockQuantity) === 'out'"
+                 [class.good-stock]="getStockStatus(product.stockQuantity) === 'good'">
+              <span class="status-text">{{ getStockStatusText(product.stockQuantity) }}</span>
+              <div class="status-dot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="variant-pricing-section" *ngIf="useVariantPricing && productVariants.length > 0">
+        <div class="summary-bar">
+          <span class="price-range" *ngIf="getMinPrice() > 0 && getMaxPrice() > 0">
+            ₱{{ getMinPrice() | number:'1.2-2' }} - ₱{{ getMaxPrice() | number:'1.2-2' }}
+          </span>
+          <span class="price-range" *ngIf="getMinPrice() === 0 || getMaxPrice() === 0">
+            Prices not set
+          </span>
+          <span class="total-stock">{{ getTotalStock() }} total units</span>
+        </div>
+
+        <div class="variants-list">
+          <div *ngFor="let variant of productVariants; let i = index" class="variant-item">
+            <div class="variant-header">
+              <h4>{{ variant.model }}</h4>
+            </div>
+            <div class="variant-fields">
+              <div class="form-group">
+                <label>Price (₱)</label>
+                <input 
+                  type="number" 
+                  [(ngModel)]="variant.price" 
+                  name="variantPrice_{{i}}" 
+                  class="form-control"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  (ngModelChange)="onVariantPriceChange()">
+              </div>
+              <div class="form-group">
+                <label>Stock Quantity</label>
+                <div class="stock-input-container">
+                  <input 
+                    type="number" 
+                    [(ngModel)]="variant.stockQuantity" 
+                    name="variantStock_{{i}}" 
+                    class="form-control"
+                    [class.low-stock]="getStockStatus(variant.stockQuantity) === 'low'"
+                    [class.out-of-stock]="getStockStatus(variant.stockQuantity) === 'out'"
+                    [class.good-stock]="getStockStatus(variant.stockQuantity) === 'good'"
+                    placeholder="0"
+                    min="0"
+                    (ngModelChange)="onVariantStockChange()">
+                  <div class="stock-status-indicator" 
+                       [class.low-stock]="getStockStatus(variant.stockQuantity) === 'low'"
+                       [class.out-of-stock]="getStockStatus(variant.stockQuantity) === 'out'"
+                       [class.good-stock]="getStockStatus(variant.stockQuantity) === 'good'">
+                    <span class="status-text">{{ getStockStatusText(variant.stockQuantity) }}</span>
+                    <div class="status-dot"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Status -->
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <h2>Product Status</h2>
+      </div>
+      <div class="toggle-container">
+        <div class="form-group toggle-group">
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="product.isPublished" name="isPublished">
+            <span class="slider round"></span>
+          </label>
+          <div class="toggle-info">
+            <h4>{{ product.isPublished ? 'Published' : 'Draft' }}</h4>
+            <p>{{ product.isPublished ? 'Product is visible on the storefront.' : 'Product is saved as a draft and not visible to customers.' }}</p>
+          </div>
+        </div>
+        <div class="form-group toggle-group">
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="product.isFeatured" name="isFeatured">
+            <span class="slider round"></span>
+          </label>
+          <div class="toggle-info">
+            <h4>{{ product.isFeatured ? 'Featured Product' : 'Not Featured' }}</h4>
+            <p>{{ product.isFeatured ? 'Product will appear in the featured section on the homepage.' : 'Product will not be highlighted on the homepage.' }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <div class="form-actions-left">
+        <button 
+          *ngIf="isEditMode" 
+          type="button" 
+          class="btn btn-danger" 
+          (click)="deleteProduct()"
+          [disabled]="submitting">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6"></path>
+          </svg>
+          Delete Product
+        </button>
+      </div>
+      
+      <div class="form-actions-right">
+        <button type="button" class="btn btn-secondary" (click)="goBack()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"></path>
+          </svg>
+          Cancel
+        </button>
+        
+        <button 
+          type="submit" 
+          class="btn btn-primary btn-update" 
+          [disabled]="submitting">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" *ngIf="!submitting">
+            <path d="M20 6L9 17l-5-5"></path>
+          </svg>
+          <div class="loading-spinner" *ngIf="submitting"></div>
+          {{ submitting ? 'Saving...' : (isEditMode ? 'Update Product' : (product.isPublished ? 'Publish Product' : 'Save as Draft')) }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Error Display -->
+    <div *ngIf="errorMessage" class="error-container">
+      <div class="error-icon">⚠️</div>
+      <p>{{ errorMessage }}</p>
+    </div>
+  </form>
+
+  <!-- Confirmation Modal -->
+  <app-confirmation-modal
+    [isVisible]="showConfirmationModal"
+    [title]="confirmationTitle"
+    [message]="confirmationMessage"
+    [type]="confirmationType"
+    [isLoading]="submitting"
+    confirmText="Confirm"
+    cancelText="Cancel"
+    (confirm)="onConfirmAction()"
+    (cancel)="onCancelAction()"
+    (close)="onCloseModal()">
+  </app-confirmation-modal>
+</div>
