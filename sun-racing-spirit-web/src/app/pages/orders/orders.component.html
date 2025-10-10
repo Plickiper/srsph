@@ -17,7 +17,7 @@
         </div>
         <div class="items">
           <div class="item" *ngFor="let it of o.items">
-            <img [src]="(it.product && it.product.imageUrl) ? it.product.imageUrl : placeholderImg" alt="" />
+            <img [src]="(it.product && it.product.imageUrl) ? it.product.imageUrl : placeholderImg" alt="" width="64" height="64" loading="lazy" />
             <div class="details">
               <div class="name">{{ (it.product && it.product.name) || 'Product' }}</div>
               <div class="meta">Variant: {{ it.compatibility || 'Universal' }}</div>

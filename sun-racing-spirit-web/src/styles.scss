@@ -129,6 +129,31 @@ app-root > main.main-content + app-footer {
   margin-top: 0 !important;
 }
 
+/* Prevent Layout Shifts - CLS Optimization */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Ensure images don't cause layout shifts */
+img[width][height] {
+  aspect-ratio: attr(width) / attr(height);
+}
+
+/* Font loading optimization to prevent text reflow */
+@font-face {
+  font-family: 'Inter';
+  font-display: swap;
+}
+
+/* Reserve space for dynamic content */
+.loading-placeholder {
+  min-height: 200px;
+  background: var(--gray-900);
+  border-radius: var(--radius-md);
+}
+
 /* Navbar styles - handled in component */
 
 html {

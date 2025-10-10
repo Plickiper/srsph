@@ -5,6 +5,9 @@
       [src]="product.imageUrl || getPlaceholderImage()" 
       [alt]="product.name"
       class="product-image"
+      width="200"
+      height="150"
+      loading="lazy"
       (error)="onImageError($event)"
     >
     <div class="product-badges">

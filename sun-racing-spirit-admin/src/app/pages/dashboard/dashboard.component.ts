@@ -30,10 +30,15 @@ import { BaseComponent } from '../../core/base-component';
         </div>
       </div>
       
-      <!-- Loading State -->
+      <!-- Loading State with Skeleton -->
       <div *ngIf="loading" class="loading-container">
-        <div class="loading-spinner"></div>
-        <p>Loading dashboard data...</p>
+        <div class="skeleton-grid">
+          <div class="skeleton-card" *ngFor="let i of [1,2,3,4]"></div>
+        </div>
+        <div class="skeleton-content">
+          <div class="skeleton-section"></div>
+          <div class="skeleton-section"></div>
+        </div>
       </div>
       
       <!-- Error State -->
@@ -879,6 +884,49 @@ import { BaseComponent } from '../../core/base-component';
       padding: 40px 20px;
       color: rgba(255, 255, 255, 0.5);
       font-style: italic;
+    }
+
+    /* Skeleton Loading Styles */
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .skeleton-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 24px;
+      height: 120px;
+      animation: skeleton-pulse 1.5s ease-in-out infinite;
+    }
+
+    .skeleton-content {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+
+    .skeleton-section {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 24px;
+      height: 400px;
+      animation: skeleton-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes skeleton-pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    @media (max-width: 1200px) {
+      .skeleton-content {
+        grid-template-columns: 1fr;
+      }
     }
   `]
 })

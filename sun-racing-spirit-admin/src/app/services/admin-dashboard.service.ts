@@ -45,7 +45,7 @@ export interface DashboardData {
 })
 export class AdminDashboardService {
   private cache: { data: DashboardData | null, timestamp: number } = { data: null, timestamp: 0 };
-  private readonly CACHE_DURATION = 30000; // 30 seconds cache
+  private readonly CACHE_DURATION = 300000; // 5 minutes cache for better performance
 
   constructor(
     private productService: AdminProductService,
@@ -60,14 +60,14 @@ export class AdminDashboardService {
       return of(this.cache.data);
     }
 
-    // Optimize by fetching only essential data and processing efficiently
+    // Optimize by fetching only essential data with limits
     return combineLatest([
       this.productService.getAllProducts().pipe(
         map((response: any) => response.success ? response.products || [] : []),
         catchError(() => of([]))
       ),
       this.userService.getAllUsers().pipe(catchError(() => of([]))),
-      this.orderService.getAllOrders().pipe(catchError(() => of([])))
+      this.orderService.getRecentOrders(10).pipe(catchError(() => of([]))) // Only recent orders
     ]).pipe(
       map(([products, users, orders]) => {
         // Process orders data once instead of multiple calls
