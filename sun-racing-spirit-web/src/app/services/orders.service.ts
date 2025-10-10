@@ -13,11 +13,12 @@ export class OrdersService {
   }
 
   getMyOrders(userId: number): Observable<any[]> {
-    return this.http.get<{success: boolean, orders: any[]}>(`${this.apiUrl}/user/${userId}`)
+    return this.http.get<{success: boolean, data: {orders: any[]}}>(`${this.apiUrl}/user/${userId}`)
       .pipe(
         map(response => {
-          if (response.success && response.orders) {
-            return response.orders;
+          console.log('Orders response:', response); // Debug log
+          if (response.success && response.data && response.data.orders) {
+            return response.data.orders;
           }
           return [];
         })

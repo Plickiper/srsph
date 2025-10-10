@@ -98,6 +98,37 @@
   background: var(--gray-800);
 }
 
+/* Global Page Background - Ensure all pages have consistent background */
+app-root {
+  background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%) !important;
+  min-height: 100vh !important;
+}
+
+app-root > main.main-content {
+  background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%) !important;
+  min-height: calc(100vh - 80px) !important; /* Subtract navbar height */
+}
+
+/* Ensure all page components have proper background coverage */
+app-home,
+app-products,
+app-product-detail,
+app-cart,
+app-checkout,
+app-orders,
+app-profile,
+app-login,
+app-register {
+  display: block !important;
+  background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%) !important;
+  min-height: calc(100vh - 80px) !important;
+}
+
+/* Ensure no gaps between main content and footer */
+app-root > main.main-content + app-footer {
+  margin-top: 0 !important;
+}
+
 /* Navbar styles - handled in component */
 
 html {
@@ -107,7 +138,7 @@ html {
 
 body {
   font-family: var(--font-primary);
-  background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%);
+  background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%) !important;
   color: var(--white);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -116,6 +147,7 @@ body {
   position: relative;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 
 /* Typography */

@@ -44,6 +44,9 @@ export interface DashboardData {
   providedIn: 'root'
 })
 export class AdminDashboardService {
+  private cache: { data: DashboardData | null, timestamp: number } = { data: null, timestamp: 0 };
+  private readonly CACHE_DURATION = 30000; // 30 seconds cache
+
   constructor(
     private productService: AdminProductService,
     private userService: AdminUserService,
@@ -51,24 +54,25 @@ export class AdminDashboardService {
   ) {}
 
   getDashboardData(): Observable<DashboardData> {
+    // Check cache first
+    const now = Date.now();
+    if (this.cache.data && (now - this.cache.timestamp) < this.CACHE_DURATION) {
+      return of(this.cache.data);
+    }
+
+    // Optimize by fetching only essential data and processing efficiently
     return combineLatest([
       this.productService.getAllProducts().pipe(
         map((response: any) => response.success ? response.products || [] : []),
         catchError(() => of([]))
       ),
       this.userService.getAllUsers().pipe(catchError(() => of([]))),
-      this.orderService.getAllOrders().pipe(catchError(() => of([]))),
-      this.orderService.getOrderStats().pipe(catchError(() => of({
-        totalOrders: 0,
-        totalRevenue: 0,
-        pendingOrders: 0,
-        completedOrders: 0,
-        processingOrders: 0,
-        cancelledOrders: 0
-      }))),
-      this.orderService.getRecentOrders(5).pipe(catchError(() => of([])))
+      this.orderService.getAllOrders().pipe(catchError(() => of([])))
     ]).pipe(
-      switchMap(([products, users, orders, orderStats, recentOrders]) => {
+      map(([products, users, orders]) => {
+        // Process orders data once instead of multiple calls
+        const orderStats = this.calculateOrderStats(orders);
+        const recentOrders = this.getRecentOrdersFromData(orders, 5);
         const lowStockThreshold = 10;
         
         // Analyze products and variants
@@ -78,7 +82,7 @@ export class AdminDashboardService {
         let lowStockVariants = 0;
         let outOfStockVariants = 0;
         
-        products.forEach((product: Product) => {
+        (Array.isArray(products) ? products : []).forEach((product: Product) => {
           // Check if product has variants (variants are already parsed by AdminProductService)
           if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
             // Product has variants
@@ -119,20 +123,21 @@ export class AdminDashboardService {
         // Generate top categories data based on actual sales
         const topCategories: TopProduct[] = this.generateTopCategories(products, orders);
 
-        const recentUsers = users
+        // Add safety checks for array operations
+        const recentUsers = Array.isArray(users) ? users
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 5);
+          .slice(0, 5) : [];
 
         // Filter out admin/staff users to only count customers
-        const customerUsers = users.filter(user => user.role === 'CUSTOMER');
+        const customerUsers = Array.isArray(users) ? users.filter(user => user.role === 'CUSTOMER') : [];
         
-        // Calculate revenue only from completed orders (including shipping fee)
-        const completedOrdersRevenue = orders
+        // Calculate revenue only from completed orders (excluding shipping fee)
+        const completedOrdersRevenue = Array.isArray(orders) ? orders
           .filter((order: any) => order.status === 'DELIVERED')
           .reduce((sum: number, order: any) => {
-            // Use the totalAmount which already includes shipping fee from the order service
-            return sum + (order.totalAmount || 0);
-          }, 0);
+            // Use totalPrice which excludes shipping fee
+            return sum + (order.totalPrice || 0);
+          }, 0) : 0;
 
         const stats: DashboardStats = {
           totalProducts: products.length,
@@ -148,25 +153,22 @@ export class AdminDashboardService {
           lowStockVariants: lowStockVariants,
           outOfStockVariants: outOfStockVariants
         };
-        // Enrich topProducts with real rating stats (averageRating) from backend
-        const ratingCalls = topProducts.map(tp => this.productService.getProductRatingStats(tp.id));
-        return (ratingCalls.length ? forkJoin(ratingCalls) : of([])).pipe(
-          map((ratings: any[]) => {
-            const enriched = topProducts.map((tp, idx) => ({
-              ...tp,
-              rating: Number(ratings[idx]?.averageRating || 0)
-            }));
-            const payload: DashboardData = {
-              stats,
-              recentOrders,
-              topProducts: enriched,
-              topCategories,
-              lowStockProducts: [],
-              recentUsers
-            };
-            return payload;
-          })
-        );
+
+        // Return data immediately without additional API calls for ratings
+        const payload: DashboardData = {
+          stats,
+          recentOrders,
+          topProducts: topProducts.map(tp => ({ ...tp, rating: 0 })), // Set default rating
+          topCategories,
+          lowStockProducts: [],
+          recentUsers
+        };
+        
+        // Update cache
+        this.cache.data = payload;
+        this.cache.timestamp = now;
+        
+        return payload;
       }),
       catchError(error => {
         console.error('Error loading dashboard data:', error);
@@ -318,5 +320,35 @@ export class AdminDashboardService {
       .slice(0, 5); // Top 5 categories
 
     return topCategories;
+  }
+
+  private calculateOrderStats(orders: any[]): OrderStats {
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const pendingOrders = orders.filter(order => order.status === 'PENDING').length;
+    const completedOrders = orders.filter(order => order.status === 'DELIVERED').length;
+    const processingOrders = orders.filter(order => order.status === 'SHIPPED').length;
+    const cancelledOrders = orders.filter(order => order.status === 'CANCELLED').length;
+
+    return {
+      totalOrders,
+      totalRevenue,
+      pendingOrders,
+      completedOrders,
+      processingOrders,
+      cancelledOrders
+    };
+  }
+
+  private getRecentOrdersFromData(orders: any[], limit: number): any[] {
+    return orders
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+
+  // Method to clear cache when data is updated
+  clearCache(): void {
+    this.cache.data = null;
+    this.cache.timestamp = 0;
   }
 }

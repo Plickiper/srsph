@@ -1,10 +1,11 @@
 import { Component, signal, OnInit, OnDestroy } from '@angular/core';
 import { AdminLayoutComponent } from './components/admin-layout/admin-layout.component';
 import { SessionService } from './services/session.service';
+import { LoadingComponent } from './components/loading/loading.component';
 
 @Component({
   selector: 'app-root',
-  imports: [AdminLayoutComponent],
+  imports: [AdminLayoutComponent, LoadingComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

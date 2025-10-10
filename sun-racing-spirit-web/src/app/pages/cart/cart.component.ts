@@ -6,7 +6,9 @@ import { Title } from '@angular/platform-browser';
 import { CartService } from '../../services/cart.service';
 import { ProductUpdateWatcherService } from '../../services/product-update-watcher.service';
 import { AuthService } from '../../services/auth.service';
+import { NotificationService } from '../../services/notification.service';
 import { CartItem, Product } from '../../models/product.model';
+import { BaseComponent } from '../../core/base-component';
 
 @Component({
   selector: 'app-cart',
@@ -15,7 +17,7 @@ import { CartItem, Product } from '../../models/product.model';
   templateUrl: './cart.component.html',
   styleUrls: ['./cart.component.scss']
 })
-export class CartComponent implements OnInit, OnDestroy {
+export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
   cartItems: CartItem[] = [];
   cartTotal = 0;
   selectedItemsTotal = 0;
@@ -30,9 +32,12 @@ export class CartComponent implements OnInit, OnDestroy {
     private cartService: CartService,
     private productUpdateWatcher: ProductUpdateWatcherService,
     private authService: AuthService,
+    private notificationService: NotificationService,
     private router: Router,
     private title: Title
-  ) {}
+  ) {
+    super();
+  }
 
   ngOnInit(): void {
     // Set page title
@@ -54,22 +59,26 @@ export class CartComponent implements OnInit, OnDestroy {
     // Refresh product data in cart to get latest prices
     this.cartService.refreshCartProductData();
     
-    this.cartService.cartItems$.subscribe(items => {
-      this.cartItems = items;
-      this.cartTotal = this.cartService.getCartTotal();
-      this.updateSelectedTotals();
-      
-      // Check if any items are missing product data and refresh if needed
-      const itemsMissingProductData = items.some(item => !item.product);
-      if (itemsMissingProductData) {
-        this.cartService.refreshCartProductData();
-      }
-    });
+    this.addSubscription(
+      this.cartService.cartItems$.subscribe(items => {
+        this.cartItems = items;
+        this.cartTotal = this.cartService.getCartTotal();
+        this.updateSelectedTotals();
+        
+        // Check if any items are missing product data and refresh if needed
+        const itemsMissingProductData = items.some(item => !item.product);
+        if (itemsMissingProductData) {
+          this.cartService.refreshCartProductData();
+        }
+      })
+    );
   }
 
-  ngOnDestroy(): void {
+  override ngOnDestroy(): void {
     // Stop watching for product updates when leaving the cart page
     this.productUpdateWatcher.stopWatching();
+    // Call parent ngOnDestroy to unsubscribe from all subscriptions
+    super.ngOnDestroy();
   }
 
 
@@ -78,9 +87,22 @@ export class CartComponent implements OnInit, OnDestroy {
     if (newQuantity < 1) {
       return;
     }
+    
     const productId = item.product?.id ?? item.productId;
     if (productId == null) return;
-    this.cartService.updateQuantity(productId, item.size || 'Universal', newQuantity);
+    
+    // Get current variant
+    const currentVariant = item.size || item.compatibility || 'Universal';
+    
+    // Update quantity in cart service
+    this.cartService.updateQuantity(productId, currentVariant, newQuantity);
+    
+    // Show feedback message
+    if (newQuantity > item.quantity) {
+      this.notificationService.success(`Quantity increased to ${newQuantity}`);
+    } else if (newQuantity < item.quantity) {
+      this.notificationService.success(`Quantity decreased to ${newQuantity}`);
+    }
   }
 
   removeItem(item: CartItem): void {
@@ -239,8 +261,15 @@ export class CartComponent implements OnInit, OnDestroy {
   updateVariant(item: CartItem, newVariant: string): void {
     const productId = item.product?.id ?? item.productId;
     if (productId == null) return;
+    
+    // Update the variant in the cart service
     this.cartService.updateItemVariant(productId, item.size || item.compatibility || 'Universal', newVariant);
+    
+    // Close the dropdown
     this.toggleVariantDropdown(item);
+    
+    // Show success message
+    this.notificationService.success(`Variant updated to ${newVariant}`);
   }
 
   getSelectedItems(): CartItem[] {

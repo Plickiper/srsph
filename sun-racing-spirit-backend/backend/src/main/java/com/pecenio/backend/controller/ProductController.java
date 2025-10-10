@@ -2,6 +2,8 @@ package com.pecenio.backend.controller;
 
 import com.pecenio.backend.service.ProductService;
 import com.pecenio.backend.service.AuditLogService;
+import com.pecenio.backend.dto.ProductRequest;
+import com.pecenio.backend.util.ApiResponseUtil;
 import com.pecenio.businessmodel.entity.Product;
 import com.pecenio.businessmodel.entity.AuditLog;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -109,41 +112,32 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createProduct(@RequestBody Map<String, Object> requestBody, HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> createProduct(@Valid @RequestBody ProductRequest productRequest, HttpServletRequest request) {
         try {
-            // Extract product and user information from request
-            Product product = extractProductFromRequest(requestBody);
-            String currentUser = extractCurrentUserFromRequest(requestBody);
-            
+            // Convert DTO to entity
+            Product product = convertToProduct(productRequest);
             
             Product createdProduct = productService.createProduct(product);
             
             // Log the product creation
             auditLogService.logAction(
                 1L, // Default admin user ID
-                currentUser != null ? currentUser : "Admin", // Use current user or default
+                "Admin", // Use current user or default
                 "admin@sunracing.com", // Default admin email
                 "CREATE_PRODUCT",
                 "PRODUCT",
                 createdProduct.getId(),
                 createdProduct.getName(),
-                "Product '" + createdProduct.getName() + "' was created by " + (currentUser != null ? currentUser : "Admin"),
+                "Product '" + createdProduct.getName() + "' was created",
                 getClientIpAddress(request),
                 request.getHeader("User-Agent"),
                 AuditLog.ActionType.CREATE,
                 AuditLog.Severity.MEDIUM
             );
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("product", createdProduct);
-            response.put("message", "Product created successfully");
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ApiResponseUtil.created(createdProduct, "Product created successfully");
         } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", "Failed to create product: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            return ApiResponseUtil.error("Failed to create product: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -501,6 +495,26 @@ public class ProductController {
             product.setIsFeatured((Boolean) requestBody.get("isFeatured"));
         }
         
+        return product;
+    }
+    
+    // Helper method to convert ProductRequest to Product
+    private Product convertToProduct(ProductRequest request) {
+        Product product = new Product();
+        product.setName(request.getName());
+        product.setBrand(request.getBrand());
+        product.setCategory(request.getCategory());
+        product.setPartNumber(request.getPartNumber());
+        product.setCompatibility(request.getCompatibility());
+        product.setMaterial(request.getMaterial());
+        product.setPrice(request.getPrice());
+        product.setStockQuantity(request.getStockQuantity());
+        product.setDescription(request.getDescription());
+        product.setImageUrl(request.getImageUrl());
+        product.setImages(request.getImages());
+        product.setVariants(request.getVariants());
+        product.setIsPublished(request.getIsPublished());
+        product.setIsFeatured(request.getIsFeatured());
         return product;
     }
     

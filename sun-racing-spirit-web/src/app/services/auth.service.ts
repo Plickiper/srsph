@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 export interface User {
   id: number;
@@ -52,7 +53,7 @@ export interface AuthResponse {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = environment.apiUrl;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   private tokenKey = 'auth_token';
@@ -96,20 +97,39 @@ export class AuthService {
   login(usernameOrEmail: string, password: string): Observable<AuthResponse> {
     const loginData: LoginRequest = { usernameOrEmail, password };
     
-    return this.http.post<AuthResponse>(`${this.apiUrl}/customer/auth/login`, loginData)
+    return this.http.post<any>(`${this.apiUrl}/customer/auth/login`, loginData)
       .pipe(
         map(response => {
-          if (response.success && response.token && response.user) {
-            this.setStoredData(response.token, response.user);
-            this.currentUserSubject.next(response.user);
+          if (response.success && response.data && response.data.token && response.data.user) {
+            this.setStoredData(response.data.token, response.data.user);
+            this.currentUserSubject.next(response.data.user);
+            return {
+              success: true,
+              token: response.data.token,
+              user: response.data.user,
+              message: response.message
+            };
           }
-          return response;
+          return {
+            success: false,
+            message: response.message || 'Login failed'
+          };
         }),
         catchError(error => {
           console.error('Login error:', error);
+          let errorMessage = 'Login failed. Please try again.';
+          
+          if (error.status === 429) {
+            errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
+          } else if (error.error?.error) {
+            errorMessage = error.error.error;
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          }
+          
           return of({
             success: false,
-            message: error.error?.message || 'Login failed. Please try again.'
+            message: errorMessage
           });
         })
       );
@@ -119,14 +139,23 @@ export class AuthService {
   register(username: string, email: string, password: string, firstName?: string, lastName?: string, phoneNumber?: string, gender?: string, dateOfBirth?: string): Observable<AuthResponse> {
     const registerData: RegisterRequest = { username, email, password, firstName, lastName, phoneNumber, gender, dateOfBirth };
     
-    return this.http.post<AuthResponse>(`${this.apiUrl}/customer/auth/register`, registerData)
+    return this.http.post<any>(`${this.apiUrl}/customer/auth/register`, registerData)
       .pipe(
         map(response => {
-          if (response.success && response.token && response.user) {
-            this.setStoredData(response.token, response.user);
-            this.currentUserSubject.next(response.user);
+          if (response.success && response.data && response.data.token && response.data.user) {
+            this.setStoredData(response.data.token, response.data.user);
+            this.currentUserSubject.next(response.data.user);
+            return {
+              success: true,
+              token: response.data.token,
+              user: response.data.user,
+              message: response.message
+            };
           }
-          return response;
+          return {
+            success: false,
+            message: response.message || 'Registration failed'
+          };
         }),
         catchError(error => {
           console.error('Registration error:', error);
@@ -182,13 +211,15 @@ export class AuthService {
       return of({ success: false, message: 'No token found' });
     }
 
-    return this.http.post<AuthResponse>(`${this.apiUrl}/customer/auth/validate-token`, { token })
+    return this.http.post<any>(`${this.apiUrl}/customer/auth/validate-token`, { token })
       .pipe(
         map(response => {
-          if (!response.success) {
+          if (response.success) {
+            return { success: true, message: 'Token is valid' };
+          } else {
             this.logout();
+            return { success: false, message: response.message || 'Token validation failed' };
           }
-          return response;
         }),
         catchError(error => {
           console.error('Token validation error:', error);

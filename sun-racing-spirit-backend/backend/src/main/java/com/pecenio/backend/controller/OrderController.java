@@ -1,5 +1,7 @@
 package com.pecenio.backend.controller;
 
+import com.pecenio.backend.dto.OrderRequest;
+import com.pecenio.backend.util.ApiResponseUtil;
 import com.pecenio.datamodel.entity.OrderEntity;
 import com.pecenio.datamodel.entity.OrderItemEntity;
 import com.pecenio.datamodel.entity.UserEntity;
@@ -8,6 +10,7 @@ import com.pecenio.datamodel.repository.OrderRepository;
 import com.pecenio.datamodel.repository.OrderItemRepository;
 import com.pecenio.datamodel.repository.UserRepository;
 import com.pecenio.datamodel.repository.ProductRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -29,6 +32,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/orders")
+@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201", "http://localhost:53515"})
 public class OrderController {
 
     @Autowired
@@ -55,15 +59,13 @@ public class OrderController {
                     .map(this::convertToSimpleOrderWithItems)
                     .collect(Collectors.toList());
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("orders", orders);
-            return ResponseEntity.ok(response);
+            Map<String, Object> data = new HashMap<>();
+            data.put("orders", orders);
+            data.put("total", orders.size());
+            
+            return ApiResponseUtil.success(data, "Orders retrieved successfully");
         } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", "Failed to retrieve orders: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ApiResponseUtil.internalError("Failed to retrieve orders: " + e.getMessage());
         }
     }
 
@@ -77,90 +79,90 @@ public class OrderController {
                     .map(this::convertToSimpleOrderWithItems)
                     .collect(Collectors.toList());
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("orders", orders);
-            return ResponseEntity.ok(response);
+            Map<String, Object> data = new HashMap<>();
+            data.put("orders", orders);
+            data.put("total", orders.size());
+            
+            return ApiResponseUtil.success(data, "User orders retrieved successfully");
         } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", "Failed to retrieve user orders: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ApiResponseUtil.internalError("Failed to retrieve user orders: " + e.getMessage());
         }
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createOrder(@RequestBody Map<String, Object> orderData) {
-        Map<String, Object> response = new HashMap<>();
-        
+    public ResponseEntity<Map<String, Object>> createOrder(@Valid @RequestBody OrderRequest orderRequest) {
         try {
-            // Extract data from request
-            Long userId = Long.valueOf(orderData.get("userId").toString());
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> items = (List<Map<String, Object>>) orderData.get("items");
-            String paymentMethod = orderData.get("paymentMethod").toString();
-            
             // Get user
-            UserEntity user = userRepository.findById(userId)
+            UserEntity user = userRepository.findById(orderRequest.getUserId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
             // Create order entity
             OrderEntity order = new OrderEntity();
             order.setUser(user);
             order.setStatus(OrderEntity.OrderStatus.PENDING);
-            order.setPaymentMethod(paymentMethod);
+            order.setPaymentMethod(orderRequest.getPaymentMethod() != null ? orderRequest.getPaymentMethod() : "CASH_ON_DELIVERY");
             
-            // Set recipient information from delivery data
-            if (orderData.containsKey("fullName")) {
-                order.setRecipientName(orderData.get("fullName").toString());
+            // Set recipient information
+            if (orderRequest.getPhoneNumber() != null) {
+                order.setRecipientPhone(orderRequest.getPhoneNumber());
             }
-            if (orderData.containsKey("phoneNumber")) {
-                order.setRecipientPhone(orderData.get("phoneNumber").toString());
+            
+            // Set recipient name from user information
+            String recipientName = "";
+            if (user.getFirstName() != null && user.getLastName() != null) {
+                recipientName = user.getFirstName() + " " + user.getLastName();
+            } else if (user.getUsername() != null) {
+                recipientName = user.getUsername();
             }
-            if (orderData.containsKey("address")) {
-                String address = orderData.get("address").toString();
-                if (orderData.containsKey("city")) {
-                    address += ", " + orderData.get("city").toString();
-                }
-                if (orderData.containsKey("state")) {
-                    address += ", " + orderData.get("state").toString();
-                }
-                if (orderData.containsKey("postalCode")) {
-                    address += " " + orderData.get("postalCode").toString();
-                }
-                if (orderData.containsKey("country")) {
-                    address += ", " + orderData.get("country").toString();
-                }
-                order.setDeliveryAddress(address);
+            order.setRecipientName(recipientName);
+            
+            // Build delivery address
+            StringBuilder addressBuilder = new StringBuilder();
+            if (orderRequest.getShippingAddress() != null) {
+                addressBuilder.append(orderRequest.getShippingAddress());
             }
+            if (orderRequest.getCity() != null) {
+                addressBuilder.append(", ").append(orderRequest.getCity());
+            }
+            if (orderRequest.getState() != null) {
+                addressBuilder.append(", ").append(orderRequest.getState());
+            }
+            if (orderRequest.getPostalCode() != null) {
+                addressBuilder.append(" ").append(orderRequest.getPostalCode());
+            }
+            if (orderRequest.getCountry() != null) {
+                addressBuilder.append(", ").append(orderRequest.getCountry());
+            }
+            order.setDeliveryAddress(addressBuilder.toString());
             
             // Calculate total price
             BigDecimal totalPrice = BigDecimal.ZERO;
-            for (Map<String, Object> item : items) {
-                BigDecimal price = new BigDecimal(item.get("price").toString());
-                Integer quantity = Integer.valueOf(item.get("quantity").toString());
-                totalPrice = totalPrice.add(price.multiply(BigDecimal.valueOf(quantity)));
+            for (OrderRequest.OrderItemRequest item : orderRequest.getItems()) {
+                ProductEntity product = productRepository.findById(item.getProductId())
+                        .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProductId()));
+                
+                BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                totalPrice = totalPrice.add(itemTotal);
             }
             order.setTotalPrice(totalPrice);
             
             // Save order first to get ID
             OrderEntity savedOrder = orderRepository.save(order);
             
-            // Create order items - save them individually
-            for (Map<String, Object> item : items) {
-                Long productId = Long.valueOf(item.get("productId").toString());
-                ProductEntity product = productRepository.findById(productId)
-                        .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
+            // Create order items
+            for (OrderRequest.OrderItemRequest item : orderRequest.getItems()) {
+                ProductEntity product = productRepository.findById(item.getProductId())
+                        .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProductId()));
                 
                 OrderItemEntity orderItem = new OrderItemEntity();
                 orderItem.setOrder(savedOrder);
                 orderItem.setProduct(product);
-                orderItem.setQuantity(Integer.valueOf(item.get("quantity").toString()));
-                orderItem.setPrice(new BigDecimal(item.get("price").toString()));
+                orderItem.setQuantity(item.getQuantity());
+                orderItem.setPrice(product.getPrice());
                 
                 // Set compatibility if provided
-                if (item.containsKey("size")) {
-                    orderItem.setCompatibility(item.get("size").toString());
+                if (item.getCompatibility() != null) {
+                    orderItem.setCompatibility(item.getCompatibility());
                 }
                 
                 // Save the order item
@@ -170,16 +172,10 @@ public class OrderController {
             // Re-fetch the order with items to return complete data
             OrderEntity completeOrder = orderRepository.findById(savedOrder.getId()).orElse(savedOrder);
             
-            response.put("success", true);
-            response.put("message", "Order created successfully");
-            response.put("order", convertToSimpleOrder(completeOrder));
-            
-            return ResponseEntity.ok(response);
+            return ApiResponseUtil.created(convertToSimpleOrder(completeOrder), "Order created successfully");
             
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("error", "Failed to create order: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ApiResponseUtil.internalError("Failed to create order: " + e.getMessage());
         }
     }
 

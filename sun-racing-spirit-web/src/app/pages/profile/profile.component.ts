@@ -6,6 +6,7 @@ import { Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { AuthService, User } from '../../services/auth.service';
 import { NotificationService } from '../../services/notification.service';
+import { BaseComponent } from '../../core/base-component';
 
 @Component({
   selector: 'app-profile',
@@ -14,7 +15,7 @@ import { NotificationService } from '../../services/notification.service';
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss']
 })
-export class ProfileComponent implements OnInit, OnDestroy {
+export class ProfileComponent extends BaseComponent implements OnInit, OnDestroy {
   profileForm: FormGroup;
   currentUser: User | null = null;
   isDeleting = false;
@@ -33,6 +34,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     private notificationService: NotificationService,
     private http: HttpClient
   ) {
+    super();
     this.profileForm = this.fb.group({
       username: [{ value: '', disabled: true }], // Fixed, not editable
       firstName: ['', [Validators.required, Validators.minLength(2)]],
@@ -50,9 +52,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
     });
 
     // Track form changes
-    this.profileForm.valueChanges.subscribe(() => {
-      this.checkForChanges();
-    });
+    this.addSubscription(
+      this.profileForm.valueChanges.subscribe(() => {
+        this.checkForChanges();
+      })
+    );
   }
 
   ngOnInit(): void {
@@ -67,8 +71,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.loadUserProfile();
   }
 
-  ngOnDestroy(): void {
-    // Cleanup is handled by HostListener decorator
+  override ngOnDestroy(): void {
+    // Call parent ngOnDestroy to unsubscribe from all subscriptions
+    super.ngOnDestroy();
   }
 
   @HostListener('window:scroll', ['$event'])

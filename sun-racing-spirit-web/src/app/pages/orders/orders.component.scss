@@ -1,5 +1,7 @@
 .orders-page {
   padding: var(--spacing-2xl) 0 var(--spacing-3xl);
+  background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%);
+  min-height: 100vh;
   .container { max-width: 1180px; margin: 0 auto; }
   .tabs {
     display: flex;

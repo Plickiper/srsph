@@ -79,6 +79,7 @@ import { RouterModule } from '@angular/router';
       background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%);
       border-top: 1px solid var(--gray-800);
       margin-top: 0;
+      margin-bottom: 0;
     }
 
     .footer-content {

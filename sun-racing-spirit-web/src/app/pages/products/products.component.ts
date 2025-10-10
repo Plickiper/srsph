@@ -76,7 +76,7 @@ import { ProductListComponent } from '../../components/product-list/product-list
   styles: [`
     .products-page {
       min-height: 100vh;
-      background: #1a1a1a;
+      background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%);
       color: white;
       padding: 20px;
     }

@@ -152,7 +152,8 @@ public class ProductEntity {
         this.isFeatured = product.getIsFeatured() != null ? product.getIsFeatured() : false;
         this.rating = product.getRating() != null ? product.getRating() : BigDecimal.ZERO;
         this.reviewCount = product.getReviewCount() != null ? product.getReviewCount() : 0;
-        this.soldCount = product.getSoldCount() != null ? product.getSoldCount() : 0;
+        // Preserve existing sold count if not provided in update
+        this.soldCount = product.getSoldCount() != null ? product.getSoldCount() : this.soldCount;
         this.updatedAt = LocalDateTime.now();
     }
 

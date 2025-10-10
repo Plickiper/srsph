@@ -1,6 +1,7 @@
 package com.pecenio.backend.controller;
 
 import com.pecenio.backend.service.UserService;
+import com.pecenio.backend.util.ApiResponseUtil;
 import com.pecenio.businessmodel.entity.User;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,78 +22,111 @@ public class UserController {
     private UserService userService;
 
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+    public ResponseEntity<Map<String, Object>> getAllUsers() {
+        try {
+            List<User> users = userService.getAllUsers();
+            Map<String, Object> data = new HashMap<>();
+            data.put("users", users);
+            data.put("total", users.size());
+            return ApiResponseUtil.success(data, "Users retrieved successfully");
+        } catch (Exception e) {
+            return ApiResponseUtil.internalError("Failed to retrieve users: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
-        Optional<User> user = userService.getUserById(id);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get());
+    public ResponseEntity<Map<String, Object>> getUserById(@PathVariable Long id) {
+        try {
+            Optional<User> user = userService.getUserById(id);
+            if (user.isPresent()) {
+                return ApiResponseUtil.success(user.get(), "User retrieved successfully");
+            }
+            return ApiResponseUtil.notFound("User not found");
+        } catch (Exception e) {
+            return ApiResponseUtil.internalError("Failed to retrieve user: " + e.getMessage());
         }
-        return ResponseEntity.notFound().build();
     }
 
     @PostMapping
-    public ResponseEntity<User> createUser(@Valid @RequestBody User user) {
+    public ResponseEntity<Map<String, Object>> createUser(@Valid @RequestBody User user) {
         try {
             User createdUser = userService.createUser(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+            return ApiResponseUtil.created(createdUser, "User created successfully");
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return ApiResponseUtil.error("User creation failed: " + e.getMessage(), HttpStatus.CONFLICT);
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody User user) {
+    public ResponseEntity<Map<String, Object>> updateUser(@PathVariable Long id, @Valid @RequestBody User user) {
         try {
             User updatedUser = userService.updateUser(id, user);
-            return ResponseEntity.ok(updatedUser);
+            return ApiResponseUtil.success(updatedUser, "User updated successfully");
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ApiResponseUtil.notFound("User not found");
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable Long id) {
         try {
             userService.deleteUser(id);
-            return ResponseEntity.noContent().build();
+            return ApiResponseUtil.success(null, "User deleted successfully");
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ApiResponseUtil.notFound("User not found");
         }
     }
 
     @GetMapping("/username/{username}")
-    public ResponseEntity<User> getUserByUsername(@PathVariable String username) {
-        Optional<User> user = userService.getUserByUsername(username);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get());
+    public ResponseEntity<Map<String, Object>> getUserByUsername(@PathVariable String username) {
+        try {
+            Optional<User> user = userService.getUserByUsername(username);
+            if (user.isPresent()) {
+                return ApiResponseUtil.success(user.get(), "User retrieved successfully");
+            }
+            return ApiResponseUtil.notFound("User not found");
+        } catch (Exception e) {
+            return ApiResponseUtil.internalError("Failed to retrieve user: " + e.getMessage());
         }
-        return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/email/{email}")
-    public ResponseEntity<User> getUserByEmail(@PathVariable String email) {
-        Optional<User> user = userService.getUserByEmail(email);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get());
+    public ResponseEntity<Map<String, Object>> getUserByEmail(@PathVariable String email) {
+        try {
+            Optional<User> user = userService.getUserByEmail(email);
+            if (user.isPresent()) {
+                return ApiResponseUtil.success(user.get(), "User retrieved successfully");
+            }
+            return ApiResponseUtil.notFound("User not found");
+        } catch (Exception e) {
+            return ApiResponseUtil.internalError("Failed to retrieve user: " + e.getMessage());
         }
-        return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/role/{role}")
-    public ResponseEntity<List<User>> getUsersByRole(@PathVariable String role) {
-        List<User> users = userService.getUsersByRole(role);
-        return ResponseEntity.ok(users);
+    public ResponseEntity<Map<String, Object>> getUsersByRole(@PathVariable String role) {
+        try {
+            List<User> users = userService.getUsersByRole(role);
+            Map<String, Object> data = new HashMap<>();
+            data.put("users", users);
+            data.put("total", users.size());
+            return ApiResponseUtil.success(data, "Users retrieved successfully");
+        } catch (Exception e) {
+            return ApiResponseUtil.internalError("Failed to retrieve users: " + e.getMessage());
+        }
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<User>> searchUsers(@RequestParam String search) {
-        List<User> users = userService.searchUsers(search);
-        return ResponseEntity.ok(users);
+    public ResponseEntity<Map<String, Object>> searchUsers(@RequestParam String search) {
+        try {
+            List<User> users = userService.searchUsers(search);
+            Map<String, Object> data = new HashMap<>();
+            data.put("users", users);
+            data.put("total", users.size());
+            return ApiResponseUtil.success(data, "Search completed successfully");
+        } catch (Exception e) {
+            return ApiResponseUtil.internalError("Failed to search users: " + e.getMessage());
+        }
     }
 
     @PostMapping("/login")

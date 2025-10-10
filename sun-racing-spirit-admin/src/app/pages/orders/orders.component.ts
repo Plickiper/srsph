@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
-import { OrdersService } from '../../services/orders.service';
+import { AdminOrderService } from '../../services/admin-order.service';
 
 @Component({
   selector: 'app-orders',
@@ -1313,7 +1313,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   deliveryPreviewUrl?: string;
 
   constructor(
-    private ordersService: OrdersService,
+    private ordersService: AdminOrderService,
     private route: ActivatedRoute
   ) {}
 
@@ -1346,15 +1346,12 @@ export class OrdersComponent implements OnInit, OnDestroy {
   }
 
   refresh() {
-    const status = this.tab === 'ALL' ? undefined
-      : this.tab === 'TO_SHIP' ? 'PENDING'
-      : this.tab === 'TO_RECEIVE' ? 'SHIPPED'
-      : 'DELIVERED';
-    this.ordersService.getAll(status as any).subscribe({
-      next: (list) => {
+    this.ordersService.getAllOrders().subscribe({
+      next: (list: any[]) => {
+        console.log('Admin orders loaded:', list); // Debug log
         this.orders = Array.isArray(list) ? list : [];
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error loading orders:', error);
         this.orders = [];
       }
@@ -1387,14 +1384,14 @@ export class OrdersComponent implements OnInit, OnDestroy {
   }
 
   markOutForDelivery(o: any) {
-    this.ordersService.updateStatus(o.id, 'SHIPPED').subscribe(resp => {
+    this.ordersService.updateOrderStatus(o.id, 'SHIPPED').subscribe(resp => {
       o.status = 'SHIPPED';
       this.refresh();
     });
   }
 
   markDelivered(o: any) {
-    this.ordersService.updateStatus(o.id, 'DELIVERED').subscribe(resp => {
+    this.ordersService.updateOrderStatus(o.id, 'DELIVERED').subscribe(resp => {
       o.status = 'DELIVERED';
       this.refresh();
     });

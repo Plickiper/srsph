@@ -780,18 +780,18 @@ export class CartService {
     const cart = this.getCurrentCart();
     if (!cart) return;
 
-    // Check if item already exists
+    // Check if item already exists with the same product AND same variant
     const normalizedSize = cartItem.size || 'Universal';
     const existingItem = cart.items.find(
       item => item.productId === cartItem.productId && (((item.size || item.compatibility || 'Universal')) === normalizedSize)
     );
 
     if (existingItem) {
-      // Update quantity
+      // Update quantity for same product + same variant
       existingItem.quantity += cartItem.quantity;
       existingItem.updatedAt = new Date().toISOString();
     } else {
-      // Add new item - initialize selected property to false by default
+      // Add new item (different variant or new product) - initialize selected property to false by default
       cartItem.selected = false;
       cart.items.push(cartItem);
     }
@@ -990,34 +990,63 @@ export class CartService {
     return this.getSelectedItemsTotal() + this.getShippingFee();
   }
 
+
   // Update item variant
   updateItemVariant(productId: number, oldVariant: string, newVariant: string): void {
     const cart = this.cartSubject.value;
     if (!cart) return;
 
-    const item = cart.items.find(i => i.productId === productId && ((i.size || 'Universal') === (oldVariant || 'Universal')));
+    // Find the item by productId and current variant
+    const item = cart.items.find(i => 
+      i.productId === productId && 
+      ((i.size || i.compatibility || 'Universal') === (oldVariant || 'Universal'))
+    );
+    
     if (item) {
+      // Check if there's already an item with the new variant
+      const existingNewVariant = cart.items.find(i => 
+        i.productId === productId && 
+        ((i.size || i.compatibility || 'Universal') === (newVariant || 'Universal'))
+      );
+      
+      if (existingNewVariant) {
+        // Don't merge - just show a message that variant already exists
+        this.notificationService.error(`Variant "${newVariant}" already exists in cart. Please remove the existing item first or add a different quantity.`);
+        return;
+      }
+      
+      // No existing item with new variant, just update the current item
       item.size = newVariant;
+      item.compatibility = newVariant; // Keep both in sync
+      item.updatedAt = new Date().toISOString();
+      
+      // Recalculate totals
+      this.recalculateCartTotals(cart);
+      
+      // Update the cart subject to trigger UI updates
+      this.cartSubject.next({ ...cart });
+      this.saveCartToStorage(cart);
+      
       // If user is authenticated and item has a persisted id, sync to server
       if (this.authService.isAuthenticated() && typeof item.id === 'number' && item.id > 0) {
         // Ensure backend receives compatibility equal to selected size
-        const payload: any = { ...item, compatibility: item.size || 'Universal' };
+        const payload: any = { ...item, compatibility: newVariant };
         this.updateCartItem(item.id, payload).subscribe({
-          next: (updatedCart) => this.applyServerCartPreserveProduct(updatedCart),
-          error: () => {
-            // Fallback: still update locally to keep UX responsive
-            this.cartSubject.next({ ...cart });
-            this.saveCartToStorage(cart);
+          next: (updatedCart) => {
+            // Apply server response but preserve local changes
+            this.applyServerCartPreserveProduct(updatedCart);
+            this.bringItemToTop(productId, newVariant);
+          },
+          error: (error) => {
+            console.error('Error updating variant on server:', error);
+            // Keep local changes even if server update fails
+            this.bringItemToTop(productId, newVariant);
           }
         });
-        // Bring the edited item to the top in either case
-        this.bringItemToTop(productId, newVariant || 'Universal');
-        return;
+      } else {
+        // For guest users, just bring item to top
+        this.bringItemToTop(productId, newVariant);
       }
-      this.cartSubject.next({ ...cart });
-      this.saveCartToStorage(cart);
-      // Bring the edited item to the top for immediate feedback
-      this.bringItemToTop(productId, newVariant || 'Universal');
     }
   }
 }

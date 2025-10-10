@@ -3,11 +3,15 @@ package com.pecenio.backend.controller;
 import com.pecenio.backend.service.UserService;
 import com.pecenio.backend.service.JwtService;
 import com.pecenio.backend.service.PasswordService;
+import com.pecenio.backend.dto.LoginRequest;
+import com.pecenio.backend.dto.RegisterRequest;
+import com.pecenio.backend.util.ApiResponseUtil;
 import com.pecenio.businessmodel.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -27,162 +31,82 @@ public class CustomerAuthController {
     private PasswordService passwordService;
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, Object>> register(@RequestBody Map<String, String> request) {
-        Map<String, Object> response = new HashMap<>();
-        
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
         try {
-            String username = request.get("username");
-            String email = request.get("email");
-            String password = request.get("password");
-            String firstName = request.get("firstName");
-            String lastName = request.get("lastName");
-            String phoneNumber = request.get("phoneNumber");
-            String gender = request.get("gender");
-            String dateOfBirthStr = request.get("dateOfBirth");
-            
-            // Validate required fields
-            if (username == null || username.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "Username is required");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            if (email == null || email.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "Email is required");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            if (password == null || password.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "Password is required");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            // Personal information fields are now optional - will be filled in profile page
-            
-            if (dateOfBirthStr == null || dateOfBirthStr.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "Date of birth is required");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
             // Validate password strength
-            if (!passwordService.isValidPassword(password)) {
-                response.put("success", false);
-                response.put("message", passwordService.getPasswordRequirements());
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            // Parse date of birth
-            LocalDateTime dateOfBirth;
-            try {
-                dateOfBirth = LocalDateTime.parse(dateOfBirthStr + "T00:00:00");
-            } catch (Exception e) {
-                response.put("success", false);
-                response.put("message", "Invalid date of birth format");
-                return ResponseEntity.badRequest().body(response);
+            if (!passwordService.isValidPassword(request.getPassword())) {
+                return ApiResponseUtil.error(passwordService.getPasswordRequirements(), HttpStatus.BAD_REQUEST);
             }
             
             // Validate age (must be 18+)
             LocalDateTime now = LocalDateTime.now();
-            int age = now.getYear() - dateOfBirth.getYear();
-            if (now.getMonthValue() < dateOfBirth.getMonthValue() || 
-                (now.getMonthValue() == dateOfBirth.getMonthValue() && now.getDayOfMonth() < dateOfBirth.getDayOfMonth())) {
+            int age = now.getYear() - request.getDateOfBirth().getYear();
+            if (now.getMonthValue() < request.getDateOfBirth().getMonthValue() || 
+                (now.getMonthValue() == request.getDateOfBirth().getMonthValue() && now.getDayOfMonth() < request.getDateOfBirth().getDayOfMonth())) {
                 age--;
             }
             
             if (age < 18) {
-                response.put("success", false);
-                response.put("message", "You must be 18 years or older to register");
-                return ResponseEntity.badRequest().body(response);
+                return ApiResponseUtil.error("You must be 18 years or older to register", HttpStatus.BAD_REQUEST);
             }
             
             // Create user
             User user = new User();
-            user.setUsername(username.trim());
-            user.setEmail(email.trim().toLowerCase());
-            user.setPassword(password);
+            user.setUsername(request.getUsername().trim());
+            user.setEmail(request.getEmail().trim().toLowerCase());
+            user.setPassword(request.getPassword());
             user.setRole("CUSTOMER");
             user.setIsActive(true);
-            // Personal information fields - will be filled in profile page
-            user.setFirstName(firstName != null ? firstName.trim() : null);
-            user.setLastName(lastName != null ? lastName.trim() : null);
-            user.setPhoneNumber(phoneNumber != null ? phoneNumber.trim() : null);
-            user.setGender(gender != null ? gender.trim() : null);
-            user.setDateOfBirth(dateOfBirth);
+            user.setFirstName(request.getFirstName() != null ? request.getFirstName().trim() : null);
+            user.setLastName(request.getLastName() != null ? request.getLastName().trim() : null);
+            user.setPhoneNumber(request.getPhoneNumber() != null ? request.getPhoneNumber().trim() : null);
+            user.setGender(request.getGender() != null ? request.getGender().trim() : null);
+            user.setDateOfBirth(request.getDateOfBirth());
             
             User createdUser = userService.createUser(user);
             
             // Generate JWT token
             String token = jwtService.generateToken(createdUser.getUsername(), createdUser.getRole(), createdUser.getId());
             
-            response.put("success", true);
-            response.put("message", "Account created successfully");
-            response.put("token", token);
-            response.put("user", Map.of(
-                "id", createdUser.getId(),
-                "username", createdUser.getUsername(),
-                "email", createdUser.getEmail(),
-                "role", createdUser.getRole(),
-                "firstName", createdUser.getFirstName() != null ? createdUser.getFirstName() : "",
-                "lastName", createdUser.getLastName() != null ? createdUser.getLastName() : "",
-                "phoneNumber", createdUser.getPhoneNumber() != null ? createdUser.getPhoneNumber() : "",
-                "gender", createdUser.getGender() != null ? createdUser.getGender() : "",
-                "dateOfBirth", createdUser.getDateOfBirth() != null ? createdUser.getDateOfBirth().toLocalDate().toString() : "",
-                "profilePicture", createdUser.getProfilePicture()
-            ));
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("id", createdUser.getId());
+            userData.put("username", createdUser.getUsername());
+            userData.put("email", createdUser.getEmail());
+            userData.put("role", createdUser.getRole());
+            userData.put("firstName", createdUser.getFirstName() != null ? createdUser.getFirstName() : "");
+            userData.put("lastName", createdUser.getLastName() != null ? createdUser.getLastName() : "");
+            userData.put("phoneNumber", createdUser.getPhoneNumber() != null ? createdUser.getPhoneNumber() : "");
+            userData.put("gender", createdUser.getGender() != null ? createdUser.getGender() : "");
+            userData.put("dateOfBirth", createdUser.getDateOfBirth() != null ? createdUser.getDateOfBirth().toLocalDate().toString() : "");
+            userData.put("profilePicture", createdUser.getProfilePicture());
             
-            return ResponseEntity.ok(response);
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("token", token);
+            responseData.put("user", userData);
+            
+            return ApiResponseUtil.created(responseData, "Account created successfully");
             
         } catch (RuntimeException e) {
-            response.put("success", false);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            return ApiResponseUtil.error(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Registration failed. Please try again.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ApiResponseUtil.internalError("Registration failed. Please try again.");
         }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> request) {
-        Map<String, Object> response = new HashMap<>();
-        
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
         try {
-            String usernameOrEmail = request.get("usernameOrEmail");
-            String password = request.get("password");
-            
-            // Validate required fields
-            if (usernameOrEmail == null || usernameOrEmail.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "Username or email is required");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
-            if (password == null || password.trim().isEmpty()) {
-                response.put("success", false);
-                response.put("message", "Password is required");
-                return ResponseEntity.badRequest().body(response);
-            }
-            
             // Authenticate user
-            User user = userService.login(usernameOrEmail.trim(), password);
+            User user = userService.login(request.getUsernameOrEmail().trim(), request.getPassword());
             
             // Check if user is a customer
             if (!"CUSTOMER".equals(user.getRole())) {
-                response.put("success", false);
-                response.put("message", "Access denied. Customer account required.");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                return ApiResponseUtil.forbidden("Access denied. Customer account required.");
             }
             
             // Generate JWT token
             String token = jwtService.generateToken(user.getUsername(), user.getRole(), user.getId());
             
-            response.put("success", true);
-            response.put("message", "Login successful");
-            response.put("token", token);
             Map<String, Object> userData = new HashMap<>();
             userData.put("id", user.getId());
             userData.put("username", user.getUsername());
@@ -199,18 +123,17 @@ public class CustomerAuthController {
             userData.put("state", user.getState() != null ? user.getState() : "");
             userData.put("postalCode", user.getPostalCode() != null ? user.getPostalCode() : "");
             userData.put("country", user.getCountry() != null ? user.getCountry() : "");
-            response.put("user", userData);
             
-            return ResponseEntity.ok(response);
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("token", token);
+            responseData.put("user", userData);
+            
+            return ApiResponseUtil.success(responseData, "Login successful");
             
         } catch (RuntimeException e) {
-            response.put("success", false);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            return ApiResponseUtil.error(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "Login failed. Please try again.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ApiResponseUtil.internalError("Login failed. Please try again.");
         }
     }
 

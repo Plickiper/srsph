@@ -99,26 +99,54 @@ export class CheckoutComponent implements OnInit {
   // Create order then navigate to My Orders
   placeOrder(): void {
     if (!this.user || !this.paymentMethod) return;
+    
+    // Map items with correct field names for backend
+    const items = this.items.map(i => ({
+      productId: i.productId,
+      quantity: i.quantity,
+      price: i.price,
+      compatibility: i.size || i.compatibility || 'Universal' // Map size to compatibility
+    }));
+    
+    // Map delivery info to backend expected fields
     const payload = {
       userId: this.user.id,
-      items: this.items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price, size: i.size })),
+      items: items,
       paymentMethod: this.paymentMethod,
-      ...this.delivery
+      shippingAddress: this.delivery.address || '',
+      city: this.delivery.city || '',
+      state: this.delivery.state || '',
+      postalCode: this.delivery.postalCode || '',
+      country: this.delivery.country || 'Philippines',
+      phoneNumber: this.delivery.phoneNumber || this.user.phoneNumber || ''
     };
+    
+    console.log('Creating order with payload:', payload); // Debug log
+    
     this.ordersService.createOrder(payload).subscribe({
-      next: () => {
-        try {
-          // Clear the entire cart after successful order
-          this.cartService.clearEntireCart();
-          this.cartService.clearCheckoutSession();
-        } catch (error) {
-          console.error('Error clearing cart after order:', error);
+      next: (response) => {
+        console.log('Order created successfully:', response); // Debug log
+        
+        // Check if the response indicates success
+        if (response && response.success) {
+          try {
+            // Only remove the items that were purchased, not the entire cart
+            this.cartService.removePurchasedItems(this.items);
+            this.cartService.clearCheckoutSession();
+          } catch (error) {
+            console.error('Error clearing purchased items from cart:', error);
+          }
+          this.router.navigate(['/orders']);
+        } else {
+          console.error('Order creation failed:', response);
+          // Show error message to user
+          alert('Failed to create order. Please try again.');
         }
-        this.router.navigate(['/orders']);
       },
       error: (error) => {
         console.error('Error creating order:', error);
-        // stay on page; a real app would show a toast
+        // Show error message to user
+        alert('Error creating order. Please try again.');
       }
     });
   }

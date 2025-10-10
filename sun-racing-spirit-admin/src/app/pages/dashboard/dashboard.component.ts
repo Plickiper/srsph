@@ -1,11 +1,12 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AdminDashboardService, DashboardData } from '../../services/admin-dashboard.service';
 import { Order } from '../../services/admin-order.service';
-import { Product } from '../../services/admin-product.service';
+import { Product, AdminProductService } from '../../services/admin-product.service';
 import { interval, Subscription } from 'rxjs';
+import { BaseComponent } from '../../core/base-component';
 
 @Component({
   selector: 'app-dashboard',
@@ -207,8 +208,10 @@ import { interval, Subscription } from 'rxjs';
                 <div class="product-stats">
                   <div class="product-sales" *ngIf="topProductsFilter === 'sold'">{{ product.sales }} sold</div>
                   <div class="product-rating" *ngIf="topProductsFilter === 'rated'">
-                    <span class="star-icon">⭐</span>
-                    <span class="rating-value">{{ product.rating || 'N/A' }}</span>
+                    <div class="stars">
+                      <span *ngFor="let star of getStars(product.rating || 0)" class="star">{{ star }}</span>
+                    </div>
+                    <span class="rating-value">{{ formatRating(product.rating || 0) }}</span>
                   </div>
                   <div class="product-category-count" *ngIf="topProductsFilter === 'category'">{{ product.sales }} sold</div>
                   <div class="product-revenue">₱{{ product.revenue.toLocaleString() }}</div>
@@ -562,7 +565,7 @@ import { interval, Subscription } from 'rxjs';
       gap: 16px;
     }
     
-    .product-item {
+    .product-list .product-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -573,7 +576,7 @@ import { interval, Subscription } from 'rxjs';
       transition: all 0.3s ease;
     }
     
-    .product-item:hover {
+    .product-list .product-item:hover {
       background: rgba(255, 255, 255, 0.06);
     }
     
@@ -597,17 +600,17 @@ import { interval, Subscription } from 'rxjs';
     .recent-orders-list {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 8px;
     }
     
     .order-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px;
+      padding: 12px;
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
+      border-radius: 6px;
       transition: all 0.3s ease;
     }
     
@@ -618,21 +621,21 @@ import { interval, Subscription } from 'rxjs';
     .order-info {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       flex: 1;
-      margin-right: 20px;
+      margin-right: 12px;
     }
     
     .order-header {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
     }
     
     .order-id {
       color: white;
       font-weight: 600;
-      font-size: 0.95rem;
+      font-size: 0.85rem;
     }
     
     .order-timestamp {
@@ -643,21 +646,22 @@ import { interval, Subscription } from 'rxjs';
     .order-products {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      padding-right: 10px;
+      gap: 6px;
+      padding-right: 8px;
     }
     
-    .product-item {
+    .recent-orders-list .product-item {
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: flex-start;
+      gap: 8px;
     }
     
     .item-image {
-      width: 40px;
-      height: 40px;
+      width: 32px;
+      height: 32px;
       object-fit: cover;
-      border-radius: 6px;
+      border-radius: 4px;
       background: #111;
       border: 1px solid #222;
       flex-shrink: 0;
@@ -666,33 +670,36 @@ import { interval, Subscription } from 'rxjs';
     .item-details {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      justify-content: flex-start;
+      align-items: flex-start;
+      gap: 3px;
     }
     
     .item-name {
       color: white;
       font-weight: 500;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
     }
     
     .item-meta {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
+      justify-content: flex-start;
     }
     
     .variant {
       color: rgba(255, 255, 255, 0.7);
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       background: rgba(255, 140, 0, 0.1);
-      padding: 2px 6px;
-      border-radius: 4px;
+      padding: 1px 4px;
+      border-radius: 3px;
       border: 1px solid rgba(255, 140, 0, 0.2);
     }
     
     .quantity {
       color: rgba(255, 255, 255, 0.6);
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       font-weight: 500;
     }
     
@@ -700,15 +707,15 @@ import { interval, Subscription } from 'rxjs';
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 4px;
-      min-width: 120px;
+      gap: 2px;
+      min-width: 100px;
       flex-shrink: 0;
     }
     
     .status-badge {
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 0.7rem;
       font-weight: 600;
       text-transform: uppercase;
     }
@@ -738,32 +745,55 @@ import { interval, Subscription } from 'rxjs';
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 4px;
+      justify-content: center;
+      gap: 8px;
+      text-align: right;
+      min-width: 80px;
     }
     
     .product-revenue {
       font-weight: 600;
       color: white;
+      text-align: right;
+      width: 100%;
     }
     
     .product-sales {
       font-size: 0.85rem;
-      color: rgba(255, 255, 255, 0.6);
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 500;
+      text-align: right;
+      width: 100%;
+    }
+    
+    .product-category-count {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 500;
+      text-align: right;
+      width: 100%;
     }
     
     .product-rating {
       display: flex;
-      align-items: center;
-      gap: 4px;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
     }
     
-    .star-icon {
-      font-size: 0.9rem;
+    .stars {
+      display: flex;
+      gap: 1px;
+    }
+    
+    .star {
+      font-size: 0.8rem;
       line-height: 1;
+      color: #ffd700;
     }
     
     .rating-value {
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       color: rgba(255, 255, 255, 0.6);
       font-weight: 500;
     }
@@ -852,28 +882,33 @@ import { interval, Subscription } from 'rxjs';
     }
   `]
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent extends BaseComponent implements OnInit, OnDestroy {
   dashboardData: DashboardData | null = null;
   loading = true;
   error: string | null = null;
   topProductsFilter: 'sold' | 'rated' | 'category' = 'sold';
   private ratingsCache = new Map<number, number>();
-  private pollingSubscription: Subscription | null = null;
+  pollingSubscription: Subscription | null = null;
   private readonly POLLING_INTERVAL = 30000; // 30 seconds
   placeholderImg = 'data:image/svg+xml;utf8,%3Csvg xmlns%3D"http%3A//www.w3.org/2000/svg" width%3D"60" height%3D"60"/%3E';
   
   constructor(
     private dashboardService: AdminDashboardService,
-    private router: Router
-  ) {}
+    private adminProductService: AdminProductService,
+    private router: Router,
+    private cd: ChangeDetectorRef
+  ) {
+    super();
+  }
   
   ngOnInit() {
     this.loadDashboardData();
     this.startPolling();
   }
 
-  ngOnDestroy() {
+  override ngOnDestroy() {
     this.stopPolling();
+    super.ngOnDestroy();
   }
   
   loadDashboardData() {
@@ -964,6 +999,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.topProductsFilter = filter;
   }
 
+  getStars(rating: number): string[] {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    
+    for (let i = 0; i < 5; i++) {
+      if (i < fullStars) {
+        stars.push('★');
+      } else if (i === fullStars && hasHalfStar) {
+        stars.push('☆');
+      } else {
+        stars.push('☆');
+      }
+    }
+    return stars;
+  }
+
+  formatRating(rating: number): string {
+    if (rating === 0) return 'No ratings';
+    return rating.toFixed(1);
+  }
+
   onFilterChange() {
     // This method is called when the dropdown selection changes
     // The filtering is handled by getFilteredTopProducts() which is called automatically
@@ -994,10 +1051,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private fetchRatingForProduct(productId: number) {
     if (this.ratingsCache.has(productId)) return;
-    // Lazy-load ratings via AdminProductService directly to avoid changing dashboard service stream
-    import('../../services/admin-product.service').then(m => {
-      const injector = (this as any).injector || null;
-    }).catch(() => {});
+    
+    // Use the injected AdminProductService
+    this.adminProductService.getProductRatingStats(productId).subscribe({
+      next: (stats) => {
+        this.ratingsCache.set(productId, stats.averageRating);
+        // Trigger change detection to update the UI
+        this.cd.detectChanges();
+      },
+      error: (error) => {
+        console.error(`Failed to fetch rating for product ${productId}:`, error);
+        // Set a default rating of 0 if fetch fails
+        this.ratingsCache.set(productId, 0);
+      }
+    });
   }
 
   private startPolling() {
@@ -1008,6 +1075,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.pollingSubscription = interval(this.POLLING_INTERVAL).subscribe(() => {
       this.refreshRecentOrders();
     });
+    
+    // Add to base component subscriptions for automatic cleanup
+    this.addSubscription(this.pollingSubscription);
   }
 
   private stopPolling() {
@@ -1019,16 +1089,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private refreshRecentOrders() {
     // Only refresh recent orders data, not the entire dashboard
-    this.dashboardService.getRecentOrders().subscribe({
-      next: (recentOrders) => {
-        if (this.dashboardData) {
-          this.dashboardData.recentOrders = recentOrders;
+    this.addSubscription(
+      this.dashboardService.getRecentOrders().subscribe({
+        next: (recentOrders) => {
+          if (this.dashboardData) {
+            this.dashboardData.recentOrders = recentOrders;
+          }
+        },
+        error: (error) => {
+          console.error('Error refreshing recent orders:', error);
+          // Don't show error to user for background refresh
         }
-      },
-      error: (error) => {
-        console.error('Error refreshing recent orders:', error);
-        // Don't show error to user for background refresh
-      }
-    });
+      })
+    );
   }
 }

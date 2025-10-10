@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, catchError, of } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface AdminUser {
   id: number;
@@ -53,7 +54,7 @@ export interface UpdateStaffRequest {
   providedIn: 'root'
 })
 export class AdminAuthService {
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = environment.apiUrl + '/auth';
   private currentUserSubject = new BehaviorSubject<AdminUser | null>(null);
   private permissionsSubject = new BehaviorSubject<AdminPermissions | null>(null);
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);

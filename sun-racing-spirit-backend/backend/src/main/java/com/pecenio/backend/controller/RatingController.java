@@ -1,5 +1,7 @@
 package com.pecenio.backend.controller;
 
+import com.pecenio.backend.dto.RatingRequest;
+import com.pecenio.backend.util.ApiResponseUtil;
 import com.pecenio.datamodel.entity.RatingEntity;
 import com.pecenio.datamodel.entity.UserEntity;
 import com.pecenio.datamodel.entity.ProductEntity;
@@ -8,7 +10,9 @@ import com.pecenio.datamodel.repository.RatingRepository;
 import com.pecenio.datamodel.repository.UserRepository;
 import com.pecenio.datamodel.repository.ProductRepository;
 import com.pecenio.datamodel.repository.OrderRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,33 +43,19 @@ public class RatingController {
     @PostMapping
     public ResponseEntity<Map<String, Object>> createRating(
             @RequestParam(value = "file", required = false) MultipartFile file,
-            @RequestParam("userId") Long userId,
-            @RequestParam("productId") Long productId,
-            @RequestParam("orderId") Long orderId,
-            @RequestParam("rating") Integer rating,
-            @RequestParam(value = "comment", required = false) String comment,
-            @RequestParam(value = "compatibility", required = false) String compatibility) {
+            @Valid @ModelAttribute RatingRequest ratingRequest) {
         Map<String, Object> response = new HashMap<>();
         
         try {
             // Debug logging
 
-            // Validate rating
-            if (rating < 1 || rating > 5) {
-                response.put("success", false);
-                response.put("message", "Rating must be between 1 and 5");
-                return ResponseEntity.badRequest().body(response);
-            }
-
             // Get entities
-            Optional<UserEntity> userOpt = userRepository.findById(userId);
-            Optional<ProductEntity> productOpt = productRepository.findById(productId);
-            Optional<OrderEntity> orderOpt = orderRepository.findById(orderId);
+            Optional<UserEntity> userOpt = userRepository.findById(ratingRequest.getUserId());
+            Optional<ProductEntity> productOpt = productRepository.findById(ratingRequest.getProductId());
+            Optional<OrderEntity> orderOpt = orderRepository.findById(ratingRequest.getOrderId());
 
             if (userOpt.isEmpty() || productOpt.isEmpty() || orderOpt.isEmpty()) {
-                response.put("success", false);
-                response.put("message", "User, product, or order not found");
-                return ResponseEntity.badRequest().body(response);
+                return ApiResponseUtil.error("User, product, or order not found", HttpStatus.BAD_REQUEST);
             }
 
             UserEntity user = userOpt.get();
@@ -76,16 +66,12 @@ public class RatingController {
             boolean alreadyRated = ratingRepository.existsByUserAndProductAndOrder(user, product, order);
             
             if (alreadyRated) {
-                response.put("success", false);
-                response.put("message", "You have already rated this product from this order");
-                return ResponseEntity.badRequest().body(response);
+                return ApiResponseUtil.error("You have already rated this product from this order", HttpStatus.BAD_REQUEST);
             }
 
             // Check if order is delivered
             if (order.getStatus() != OrderEntity.OrderStatus.DELIVERED) {
-                response.put("success", false);
-                response.put("message", "You can only rate products from delivered orders");
-                return ResponseEntity.badRequest().body(response);
+                return ApiResponseUtil.error("You can only rate products from delivered orders", HttpStatus.BAD_REQUEST);
             }
 
             // Handle image upload if provided
@@ -99,15 +85,13 @@ public class RatingController {
                     }
                     
                     // Generate unique filename including productId to avoid conflicts
-                    String filename = "review_" + userId + "_" + orderId + "_" + productId + "_" + System.currentTimeMillis() + ".jpg";
+                    String filename = "review_" + ratingRequest.getUserId() + "_" + ratingRequest.getOrderId() + "_" + ratingRequest.getProductId() + "_" + System.currentTimeMillis() + ".jpg";
                     Path filePath = uploadPath.resolve(filename);
                     Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
                     
                     reviewImageUrl = "/api/ratings/uploads/" + filename;
                 } catch (IOException e) {
-                    response.put("success", false);
-                    response.put("message", "Failed to upload review image: " + e.getMessage());
-                    return ResponseEntity.status(500).body(response);
+                    return ApiResponseUtil.internalError("Failed to upload review image: " + e.getMessage());
                 }
             }
 
@@ -116,12 +100,12 @@ public class RatingController {
             ratingEntity.setUser(user);
             ratingEntity.setProduct(product);
             ratingEntity.setOrder(order);
-            ratingEntity.setRating(rating);
-            ratingEntity.setComment(comment);
+            ratingEntity.setRating(ratingRequest.getRating());
+            ratingEntity.setComment(ratingRequest.getComment());
             ratingEntity.setReviewImageUrl(reviewImageUrl);
             // Persist which variant was rated to avoid ambiguity when multiple same products exist in one order
-            if (compatibility != null && !compatibility.trim().isEmpty()) {
-                ratingEntity.setRatedCompatibility(compatibility.trim());
+            if (ratingRequest.getCompatibility() != null && !ratingRequest.getCompatibility().trim().isEmpty()) {
+                ratingEntity.setRatedCompatibility(ratingRequest.getCompatibility().trim());
             } else {
                 // Fallback: try to infer from the specific order item
                 String inferred = null;

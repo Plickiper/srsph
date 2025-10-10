@@ -3,6 +3,8 @@ package com.pecenio.backend.controller;
 import com.pecenio.datamodel.entity.CartEntity;
 import com.pecenio.datamodel.repository.CartRepository;
 import com.pecenio.backend.service.CartService;
+import com.pecenio.backend.interceptor.RateLimitingInterceptor;
+import com.pecenio.backend.util.ApiResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,9 @@ public class DebugController {
     
     @Autowired
     private CartService cartService;
+    
+    @Autowired
+    private RateLimitingInterceptor rateLimitingInterceptor;
 
     @GetMapping("/test-guest-cart")
     public ResponseEntity<Map<String, Object>> testGuestCart() {
@@ -83,6 +88,26 @@ public class DebugController {
             response.put("error", e.getClass().getSimpleName());
             e.printStackTrace();
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    @PostMapping("/clear-rate-limits")
+    public ResponseEntity<Map<String, Object>> clearRateLimits() {
+        try {
+            rateLimitingInterceptor.clearRateLimits();
+            return ApiResponseUtil.success(null, "Rate limits cleared successfully");
+        } catch (Exception e) {
+            return ApiResponseUtil.internalError("Failed to clear rate limits: " + e.getMessage());
+        }
+    }
+    
+    @PostMapping("/clear-rate-limits/{ip}")
+    public ResponseEntity<Map<String, Object>> clearRateLimitsForIp(@PathVariable String ip) {
+        try {
+            rateLimitingInterceptor.clearRateLimitsForIp(ip);
+            return ApiResponseUtil.success(null, "Rate limits cleared for IP: " + ip);
+        } catch (Exception e) {
+            return ApiResponseUtil.internalError("Failed to clear rate limits for IP: " + e.getMessage());
         }
     }
 }

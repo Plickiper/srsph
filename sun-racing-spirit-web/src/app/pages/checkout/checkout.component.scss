@@ -1,5 +1,7 @@
 .checkout-page {
   padding: var(--spacing-2xl) 0;
+  background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%);
+  min-height: 100vh;
   .checkout-content {
     display: grid;
     grid-template-columns: 2fr 1fr;
