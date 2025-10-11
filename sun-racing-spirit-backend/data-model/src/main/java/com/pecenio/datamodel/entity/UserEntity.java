@@ -124,27 +124,63 @@ public class UserEntity {
 
     // Update from business model
     public void updateFromBusinessModel(User user) {
-        // Only update fields that are not null to preserve existing values
-        if (user.getUsername() != null) this.username = user.getUsername();
-        if (user.getEmail() != null) this.email = user.getEmail();
-        if (user.getPassword() != null) this.password = user.getPassword();
-        if (user.getRole() != null) this.role = user.getRole();
-        if (user.getFirstName() != null) this.firstName = user.getFirstName();
-        if (user.getLastName() != null) this.lastName = user.getLastName();
-        if (user.getPhoneNumber() != null) this.phoneNumber = user.getPhoneNumber();
-        if (user.getAddress() != null) this.address = user.getAddress();
-        if (user.getCity() != null) this.city = user.getCity();
-        if (user.getState() != null) this.state = user.getState();
-        if (user.getPostalCode() != null) this.postalCode = user.getPostalCode();
-        if (user.getCountry() != null) this.country = user.getCountry();
-        if (user.getGender() != null) this.gender = user.getGender();
-        if (user.getDateOfBirth() != null) this.dateOfBirth = user.getDateOfBirth();
+        // Only update fields that are not null and different from current values
+        if (user.getUsername() != null && !user.getUsername().equals(this.username)) {
+            this.username = user.getUsername();
+        }
+        if (user.getEmail() != null && !user.getEmail().equals(this.email)) {
+            this.email = user.getEmail();
+        }
+        if (user.getPassword() != null && !user.getPassword().equals(this.password)) {
+            this.password = user.getPassword();
+        }
+        if (user.getRole() != null && !user.getRole().equals(this.role)) {
+            this.role = user.getRole();
+        }
+        if (user.getFirstName() != null && !user.getFirstName().equals(this.firstName)) {
+            this.firstName = user.getFirstName();
+        }
+        if (user.getLastName() != null && !user.getLastName().equals(this.lastName)) {
+            this.lastName = user.getLastName();
+        }
+        if (user.getPhoneNumber() != null && !user.getPhoneNumber().equals(this.phoneNumber)) {
+            this.phoneNumber = user.getPhoneNumber();
+        }
+        if (user.getAddress() != null && !user.getAddress().equals(this.address)) {
+            this.address = user.getAddress();
+        }
+        if (user.getCity() != null && !user.getCity().equals(this.city)) {
+            this.city = user.getCity();
+        }
+        if (user.getState() != null && !user.getState().equals(this.state)) {
+            this.state = user.getState();
+        }
+        if (user.getPostalCode() != null && !user.getPostalCode().equals(this.postalCode)) {
+            this.postalCode = user.getPostalCode();
+        }
+        if (user.getCountry() != null && !user.getCountry().equals(this.country)) {
+            this.country = user.getCountry();
+        }
+        if (user.getGender() != null && !user.getGender().equals(this.gender)) {
+            this.gender = user.getGender();
+        }
+        if (user.getDateOfBirth() != null && !user.getDateOfBirth().equals(this.dateOfBirth)) {
+            this.dateOfBirth = user.getDateOfBirth();
+        }
         // Profile picture: allow explicit clearing when value is null
         // The frontend sends the current value when unchanged, and null when removed
         // so we should always apply it as-is (including null) to persist deletions
-        this.profilePicture = user.getProfilePicture();
-        if (user.getIsActive() != null) this.isActive = user.getIsActive();
-        if (user.getLastLoginAt() != null) this.lastLoginAt = user.getLastLoginAt();
+        if (user.getProfilePicture() != null && !user.getProfilePicture().equals(this.profilePicture)) {
+            this.profilePicture = user.getProfilePicture();
+        } else if (user.getProfilePicture() == null && this.profilePicture != null) {
+            this.profilePicture = null;
+        }
+        if (user.getIsActive() != null && !user.getIsActive().equals(this.isActive)) {
+            this.isActive = user.getIsActive();
+        }
+        if (user.getLastLoginAt() != null && !user.getLastLoginAt().equals(this.lastLoginAt)) {
+            this.lastLoginAt = user.getLastLoginAt();
+        }
         this.updatedAt = LocalDateTime.now();
     }
 

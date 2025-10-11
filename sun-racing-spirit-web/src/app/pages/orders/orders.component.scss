@@ -51,14 +51,44 @@
   .amount { text-align: right; font-weight: 600; }
   .order-total { grid-column: 1 / -1; font-weight: 700; text-align: right; margin-top: var(--spacing-md); border-top: 1px solid var(--gray-800); padding-top: var(--spacing-md); }
   
+  // Total and Cancel Button Row for PENDING orders
+  .order-total-row {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-md);
+    border-top: 1px solid var(--gray-800);
+    padding-top: var(--spacing-md);
+    
+    .order-total {
+      font-weight: 700;
+      text-align: right;
+      margin: 0;
+      border: none;
+      padding: 0;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+  }
+  
   // Action Buttons
   .order-actions {
     grid-column: 1 / -1;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
     margin-top: var(--spacing-md);
     padding-top: var(--spacing-md);
     border-top: 1px solid var(--gray-800);
+    
+    // Cancel button actions should be left-aligned
+    &.cancel-actions {
+      justify-content: flex-start;
+    }
   }
   
   .action-buttons {
@@ -503,53 +533,6 @@
     }
   }
   
-  .modal-actions {
-    display: flex;
-    gap: var(--spacing-md);
-    justify-content: flex-end;
-    margin-top: var(--spacing-lg);
-    
-    .cancel-btn, .submit-btn {
-      padding: var(--spacing-sm) var(--spacing-md);
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      border: none;
-      min-width: 80px;
-      height: 36px;
-    }
-    
-    .cancel-btn {
-      background: var(--gray-700);
-      color: var(--white);
-      
-      &:hover:not(:disabled) {
-        background: var(--gray-600);
-        transform: translateY(-1px);
-      }
-    }
-    
-    .submit-btn {
-      background: var(--sun-orange-yellow);
-      color: var(--black);
-      
-      &:hover:not(:disabled) {
-        background: #ffd700;
-        transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(255, 140, 0, 0.25);
-      }
-      
-      &:disabled {
-        background: var(--gray-600);
-        color: var(--gray-400);
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-    }
-  }
 }
 
 /* Image Upload Styles */
@@ -817,5 +800,427 @@
   
   &:hover .collapse-overlay {
     opacity: 1;
+  }
+}
+
+// Cancellation styles
+.cancelled {
+  color: #ef4444 !important;
+}
+
+.cancellation-info {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-sm);
+  
+  .cancellation-reason {
+    font-size: 0.85rem;
+    color: var(--gray-300);
+    margin-bottom: var(--spacing-xs);
+  }
+  
+  .cancelled-date {
+    font-size: 0.8rem;
+    color: var(--gray-400);
+  }
+}
+
+.cancel-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  
+  &:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+  }
+}
+
+.buy-again-btn {
+  background: var(--sun-orange-yellow);
+  color: var(--black);
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  
+  &:hover {
+    background: #ffd700;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(255, 140, 0, 0.25);
+  }
+}
+
+.confirm-cancel-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  
+  &:hover:not(:disabled) {
+    background: #dc2626;
+    transform: translateY(-1px);
+  }
+  
+  &:disabled {
+    background: var(--gray-600);
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+// Cancel Order Modal Styles - Simple like Rating Modal
+.cancel-order-modal {
+  max-width: 520px;
+  width: 90vw;
+  background: var(--secondary-black);
+  border: 1px solid var(--gray-800);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  max-height: 90vh;
+  overflow-y: auto;
+  
+  .modal-body {
+    display: block;
+    align-items: stretch;
+    justify-content: flex-start;
+    max-height: none;
+    padding: var(--spacing-lg);
+  }
+  
+  .cancel-form {
+    .order-info {
+      margin-bottom: var(--spacing-lg);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--gray-800);
+      
+      h4 {
+        color: var(--white);
+        margin: 0 0 var(--spacing-md) 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+      
+      .products-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-lg);
+        margin-top: var(--spacing-md);
+      }
+      
+      .product-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--radius-md);
+        
+        .product-details {
+          .product-name {
+            color: var(--white);
+            margin: 0 0 var(--spacing-xs) 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+          }
+          
+          .variants-list {
+            margin: var(--spacing-xs) 0 0 0;
+            
+            .variant-label {
+              color: var(--gray-400);
+              font-size: 0.8rem;
+              font-weight: 500;
+              margin-right: var(--spacing-xs);
+            }
+            
+            .variant-item {
+              color: var(--sun-orange-yellow);
+              font-size: 0.85rem;
+              font-weight: 500;
+              background: rgba(255, 140, 0, 0.1);
+              padding: 2px 6px;
+              border-radius: var(--radius-sm);
+              border: 1px solid rgba(255, 140, 0, 0.2);
+              display: inline-block;
+            }
+          }
+          
+          .item-quantity-price {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: var(--spacing-sm);
+            
+            .quantity {
+              color: var(--gray-400);
+              font-size: 0.85rem;
+            }
+            
+            .price {
+              color: var(--white);
+              font-weight: 600;
+              font-size: 0.9rem;
+            }
+          }
+        }
+      }
+      
+      .order-total {
+        font-weight: 700;
+        color: var(--white);
+        font-size: 1rem;
+        text-align: right;
+        margin-top: var(--spacing-md);
+        padding-top: var(--spacing-md);
+        border-top: 1px solid var(--gray-800);
+      }
+    }
+    
+    .cancellation-section {
+      margin-bottom: var(--spacing-lg);
+      
+      label {
+        display: block;
+        color: var(--white);
+        font-weight: 700;
+        margin-bottom: var(--spacing-sm);
+        font-size: 0.95rem;
+      }
+      
+      .reason-select {
+        width: 100%;
+        padding: var(--spacing-md);
+        background: var(--gray-800);
+        border: 1px solid var(--gray-700);
+        border-radius: var(--radius-lg);
+        color: var(--white);
+        font-family: inherit;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        
+        &:focus {
+          outline: none;
+          border-color: #ef4444;
+          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+        }
+        
+        option {
+          background: var(--gray-800);
+          color: var(--white);
+        }
+      }
+      
+      .custom-reason-section {
+        margin-top: var(--spacing-md);
+        
+        label {
+          display: block;
+          margin-bottom: var(--spacing-sm);
+          font-weight: 600;
+          color: var(--white);
+          font-size: 0.9rem;
+        }
+        
+        .custom-reason-textarea {
+          width: 100%;
+          padding: var(--spacing-md);
+          background: var(--gray-800);
+          border: 1px solid var(--gray-700);
+          border-radius: var(--radius-lg);
+          color: var(--white);
+          font-size: 0.9rem;
+          resize: vertical;
+          min-height: 80px;
+          font-family: inherit;
+          transition: all 0.3s ease;
+          
+          &:focus {
+            outline: none;
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+          }
+          
+          &::placeholder {
+            color: var(--gray-500);
+          }
+        }
+      }
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: flex-end;
+      margin-top: var(--spacing-lg);
+      
+      .submit-btn {
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        min-width: 80px;
+        height: 36px;
+        background: #ef4444;
+        color: white;
+        
+        &:hover:not(:disabled) {
+          background: #dc2626;
+          transform: translateY(-1px);
+          box-shadow: 0 3px 8px rgba(239, 68, 68, 0.25);
+        }
+        
+        &:disabled {
+          background: var(--gray-600);
+          color: var(--gray-400);
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+      }
+    }
+  }
+}
+
+// Legacy cancellation modal styles (for backward compatibility)
+.cancellation-reason-section {
+  margin: var(--spacing-lg) 0;
+  
+  label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--white);
+  }
+  
+  .reason-select {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: var(--gray-800);
+    border: 1px solid var(--gray-700);
+    border-radius: var(--radius-sm);
+    color: var(--white);
+    font-size: 0.9rem;
+    
+    &:focus {
+      outline: none;
+      border-color: var(--accent-red);
+    }
+    
+    option {
+      background: var(--gray-800);
+      color: var(--white);
+    }
+  }
+}
+
+.custom-reason-section {
+  margin-top: var(--spacing-md);
+  
+  label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--white);
+  }
+  
+  .custom-reason-textarea {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: var(--gray-800);
+    border: 1px solid var(--gray-700);
+    border-radius: var(--radius-sm);
+    color: var(--white);
+    font-size: 0.9rem;
+    resize: vertical;
+    min-height: 80px;
+    
+    &:focus {
+      outline: none;
+      border-color: var(--accent-red);
+    }
+    
+    &::placeholder {
+      color: var(--gray-500);
+    }
+  }
+}
+
+.order-summary {
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  
+  h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--white);
+    font-size: 1rem;
+  }
+  
+  .order-items {
+    margin-bottom: var(--spacing-sm);
+    
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--spacing-xs) 0;
+      border-bottom: 1px solid var(--gray-700);
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .item-name {
+        flex: 1;
+        color: var(--gray-300);
+        font-size: 0.85rem;
+      }
+      
+      .item-quantity {
+        color: var(--gray-400);
+        font-size: 0.8rem;
+        margin: 0 var(--spacing-sm);
+      }
+      
+      .item-price {
+        color: var(--white);
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+    }
+  }
+  
+  .order-total {
+    font-weight: 700;
+    color: var(--white);
+    font-size: 1rem;
+    text-align: right;
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--gray-700);
   }
 }

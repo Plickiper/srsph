@@ -34,8 +34,6 @@ public class ProductEntity {
     @Column(name = "compatibility", columnDefinition = "TEXT")
     private String compatibility;
     
-    @Column(name = "material", length = 50)
-    private String material;
     
     @Column(name = "price", nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
@@ -84,7 +82,6 @@ public class ProductEntity {
         this.category = product.getCategory();
         this.partNumber = product.getPartNumber();
         this.compatibility = product.getCompatibility();
-        this.material = product.getMaterial();
         this.price = product.getPrice();
         this.stockQuantity = product.getStockQuantity();
         this.description = product.getDescription();
@@ -105,7 +102,6 @@ public class ProductEntity {
         product.setCategory(this.category);
         product.setPartNumber(this.partNumber);
         product.setCompatibility(this.compatibility);
-        product.setMaterial(this.material);
         product.setPrice(this.price);
         product.setStockQuantity(this.stockQuantity);
         product.setDescription(this.description);
@@ -129,25 +125,12 @@ public class ProductEntity {
         this.category = product.getCategory();
         this.partNumber = product.getPartNumber();
         this.compatibility = product.getCompatibility();
-        this.material = product.getMaterial();
         this.price = product.getPrice();
         this.stockQuantity = product.getStockQuantity();
         this.description = product.getDescription();
         this.imageUrl = product.getImageUrl();
         this.images = product.getImages();
         this.variants = product.getVariants();
-        // Log variants count instead of full JSON to avoid console spam
-        if (this.variants != null && !this.variants.isEmpty()) {
-            try {
-                // Count variants by counting opening brackets in JSON array
-                long variantCount = this.variants.chars().filter(ch -> ch == '{').count();
-                System.out.println("Saving " + variantCount + " variants to database");
-            } catch (Exception e) {
-                System.out.println("Saving variants to database (count unknown)");
-            }
-        } else {
-            System.out.println("No variants to save");
-        }
         this.isPublished = product.getIsPublished() != null ? product.getIsPublished() : true;
         this.isFeatured = product.getIsFeatured() != null ? product.getIsFeatured() : false;
         this.rating = product.getRating() != null ? product.getRating() : BigDecimal.ZERO;

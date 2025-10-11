@@ -36,7 +36,6 @@ export interface ProductFilters {
   maxPrice?: number;
   minStock?: number;
   search?: string;
-  material?: string;
   compatibility?: string;
 }
 

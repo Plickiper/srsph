@@ -23,8 +23,6 @@ public class ProductRequest {
     @Size(max = 1000, message = "Compatibility must not exceed 1000 characters")
     private String compatibility;
     
-    @Size(max = 200, message = "Material must not exceed 200 characters")
-    private String material;
     
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
@@ -94,13 +92,6 @@ public class ProductRequest {
         this.compatibility = compatibility;
     }
 
-    public String getMaterial() {
-        return material;
-    }
-
-    public void setMaterial(String material) {
-        this.material = material;
-    }
 
     public BigDecimal getPrice() {
         return price;

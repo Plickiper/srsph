@@ -48,8 +48,8 @@ import { ProductListComponent } from '../../components/product-list/product-list
             <option value="name">Sort by Name</option>
             <option value="price-low">Price: Low to High</option>
             <option value="price-high">Price: High to Low</option>
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
+            <option value="most-sold">Most Sold</option>
+            <option value="top-rated">Top Rated</option>
           </select>
         </div>
 
@@ -237,10 +237,10 @@ export class ProductsComponent implements OnInit {
         return sorted.sort((a, b) => a.price - b.price);
       case 'price-high':
         return sorted.sort((a, b) => b.price - a.price);
-      case 'newest':
-        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      case 'oldest':
-        return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      case 'most-sold':
+        return sorted.sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0));
+      case 'top-rated':
+        return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
       default:
         return sorted;
     }

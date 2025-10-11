@@ -16,7 +16,6 @@ export interface Product {
   category: string;
   partNumber: string;
   compatibility?: string;
-  material?: string;
   price: number; // Base price (for backward compatibility)
   stockQuantity: number; // Total stock (for backward compatibility)
   variants?: ProductVariant[]; // Variant-specific pricing and stock
@@ -36,7 +35,6 @@ export interface ProductRequest {
   category: string;
   partNumber: string;
   compatibility?: string;
-  material?: string;
   price: number;
   stockQuantity: number;
   variants?: string | null; // JSON string for backend

@@ -1,10 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { OrdersService } from '../../services/orders.service';
 import { AuthService } from '../../services/auth.service';
 import { HttpClient } from '@angular/common/http';
+import { NotificationService } from '../../services/notification.service';
+import { CartService } from '../../services/cart.service';
 
 @Component({
   selector: 'app-orders',
@@ -15,7 +17,7 @@ import { HttpClient } from '@angular/common/http';
 })
 export class OrdersComponent implements OnInit {
   orders: any[] = [];
-  tab: 'ALL' | 'TO_SHIP' | 'TO_RECEIVE' | 'COMPLETED' = 'ALL';
+  tab: 'ALL' | 'TO_SHIP' | 'TO_RECEIVE' | 'COMPLETED' | 'CANCELLED' = 'ALL';
   placeholderImg = 'data:image/svg+xml;utf8,%3Csvg xmlns%3D"http%3A//www.w3.org/2000/svg" width%3D"60" height%3D"60"/%3E';
   
   // Modal state
@@ -24,7 +26,6 @@ export class OrdersComponent implements OnInit {
   
   // Rating modal state
   showRatingModalFlag = false;
-  selectedOrder: any = null;
   itemsForRating: any[] = [];
   currentRating = 0;
   ratingComment = '';
@@ -33,11 +34,23 @@ export class OrdersComponent implements OnInit {
   
   // Track rated orders
   ratedOrders = new Set<number>();
+  
+  // Cancellation modal state
+  showCancelModalFlag = false;
+  cancellationReasons: any[] = [];
+  selectedCancellationReason = '';
+  customCancellationReason = '';
+  
+  // Shared selected order for both rating and cancellation modals
+  selectedOrder: any = null;
 
   constructor(
     private ordersService: OrdersService, 
     private authService: AuthService,
-    private http: HttpClient
+    private http: HttpClient,
+    private notificationService: NotificationService,
+    private cartService: CartService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -71,7 +84,7 @@ export class OrdersComponent implements OnInit {
     return this.itemsTotal(o) + this.shippingFee(o);
   }
 
-  setTab(t: 'ALL' | 'TO_SHIP' | 'TO_RECEIVE' | 'COMPLETED'): void {
+  setTab(t: 'ALL' | 'TO_SHIP' | 'TO_RECEIVE' | 'COMPLETED' | 'CANCELLED'): void {
     this.tab = t;
   }
 
@@ -80,7 +93,9 @@ export class OrdersComponent implements OnInit {
     if (this.tab === 'ALL') return this.orders;
     if (this.tab === 'TO_SHIP') return this.orders.filter(o => o.status === 'PENDING');
     if (this.tab === 'TO_RECEIVE') return this.orders.filter(o => o.status === 'SHIPPED');
-    return this.orders.filter(o => o.status === 'DELIVERED');
+    if (this.tab === 'COMPLETED') return this.orders.filter(o => o.status === 'DELIVERED');
+    if (this.tab === 'CANCELLED') return this.orders.filter(o => o.status === 'CANCELLED');
+    return this.orders;
   }
 
   formatStatus(status: string): string {
@@ -183,13 +198,13 @@ export class OrdersComponent implements OnInit {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        this.notificationService.error('Please select an image file');
         return;
       }
       
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB');
+        this.notificationService.error('Image size must be less than 5MB');
         return;
       }
       
@@ -358,6 +373,108 @@ export class OrdersComponent implements OnInit {
         this.orders = [];
       }
     });
+  }
+
+  // Cancellation methods
+  showCancelModal(order: any): void {
+    this.selectedOrder = order;
+    this.showCancelModalFlag = true;
+    this.selectedCancellationReason = '';
+    this.customCancellationReason = '';
+    this.loadCancellationReasons();
+  }
+
+  closeCancelModal(): void {
+    this.showCancelModalFlag = false;
+    this.selectedOrder = null;
+    this.selectedCancellationReason = '';
+    this.customCancellationReason = '';
+  }
+
+  loadCancellationReasons(): void {
+    this.http.get<any>('http://localhost:8080/api/orders/cancellation-reasons').subscribe({
+      next: (response) => {
+        if (response.success && response.reasons) {
+          this.cancellationReasons = response.reasons;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading cancellation reasons:', error);
+        // Fallback reasons
+        this.cancellationReasons = [
+          { value: 'CHANGED_MIND', displayName: 'Changed my mind' },
+          { value: 'FOUND_BETTER_PRICE', displayName: 'Found a better price elsewhere' },
+          { value: 'NO_LONGER_NEEDED', displayName: 'No longer needed' },
+          { value: 'WRONG_ITEM', displayName: 'Ordered wrong item' },
+          { value: 'DELIVERY_ISSUES', displayName: 'Delivery issues' },
+          { value: 'PAYMENT_PROBLEMS', displayName: 'Payment problems' },
+          { value: 'OTHER', displayName: 'Other' }
+        ];
+      }
+    });
+  }
+
+  confirmCancellation(): void {
+    if (!this.selectedOrder || !this.selectedCancellationReason) {
+      return;
+    }
+
+    const reason = this.selectedCancellationReason === 'OTHER' 
+      ? this.customCancellationReason.trim() 
+      : this.cancellationReasons.find(r => r.value === this.selectedCancellationReason)?.displayName || this.selectedCancellationReason;
+
+    const cancelRequest = {
+      orderId: this.selectedOrder.id,
+      reason: reason
+    };
+
+    this.http.post<any>('http://localhost:8080/api/orders/cancel', cancelRequest).subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Update the order status locally
+          const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+          if (orderIndex !== -1) {
+            this.orders[orderIndex].status = 'CANCELLED';
+            this.orders[orderIndex].cancellationReason = reason;
+            this.orders[orderIndex].cancelledAt = new Date().toISOString();
+          }
+          
+          this.closeCancelModal();
+          this.notificationService.success('Order cancelled successfully');
+        } else {
+          this.notificationService.error('Failed to cancel order: ' + (response.error || 'Unknown error'));
+        }
+      },
+      error: (error) => {
+        console.error('Error cancelling order:', error);
+        this.notificationService.error('Failed to cancel order. Please try again.');
+      }
+    });
+  }
+
+  buyAgain(order: any): void {
+    if (order && order.items && order.items.length > 0) {
+      // Get the first item from the cancelled order
+      const item = order.items[0];
+      if (item && item.product) {
+        // Create a complete product object with price from the order item
+        const productWithPrice = {
+          ...item.product,
+          price: item.price // Use the price from the order item, not the product
+        };
+        
+        // Use beginCheckoutForProduct to directly set up checkout session
+        // This bypasses the shopping cart entirely
+        this.cartService.beginCheckoutForProduct(
+          productWithPrice, 
+          item.quantity, 
+          item.compatibility || 'Universal'
+        );
+        
+        // Navigate directly to checkout page
+        this.router.navigate(['/checkout']);
+      }
+    }
   }
 
 }

@@ -12,11 +12,7 @@ import { AdminAuthService } from '../../services/admin-auth.service';
       <div class="page-header">
         <div class="header-content">
           <h1>Audit Log</h1>
-          <p>Recent admin and staff activities</p>
         </div>
-        <button class="btn btn-primary" (click)="loadAuditLogs()" [disabled]="loading">
-          {{ loading ? 'Loading...' : 'Refresh' }}
-        </button>
       </div>
 
       <!-- Loading State -->

@@ -35,8 +35,6 @@ public class Product {
     @Size(max = 10000, message = "Compatibility must not exceed 10000 characters")
     private String compatibility;
     
-    @Size(max = 50, message = "Material must not exceed 50 characters")
-    private String material;
     
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")

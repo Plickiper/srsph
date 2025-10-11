@@ -1,6 +1,7 @@
 package com.pecenio.backend.controller;
 
 import com.pecenio.backend.dto.OrderRequest;
+import com.pecenio.backend.dto.CancelOrderRequest;
 import com.pecenio.backend.util.ApiResponseUtil;
 import com.pecenio.datamodel.entity.OrderEntity;
 import com.pecenio.datamodel.entity.OrderItemEntity;
@@ -14,6 +15,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -49,10 +52,25 @@ public class OrderController {
 
     @GetMapping
     @Transactional(readOnly = true)
-    public ResponseEntity<Map<String, Object>> getAllOrders() {
+    public ResponseEntity<Map<String, Object>> getAllOrders(
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String order) {
         try {
-            // Get all orders sorted by creation date descending (most recent first)
-            List<OrderEntity> entities = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+            List<OrderEntity> entities;
+            
+            // Handle limit parameter
+            if (limit != null && limit > 0) {
+                // For recent orders with limit, get most recent first
+                entities = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+                // Apply limit after sorting
+                if (entities.size() > limit) {
+                    entities = entities.subList(0, limit);
+                }
+            } else {
+                // Get all orders sorted by creation date descending (most recent first)
+                entities = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+            }
             
             // Convert to simple DTOs to avoid circular references - include order items with products
             List<Map<String, Object>> orders = entities.stream()
@@ -62,8 +80,20 @@ public class OrderController {
             Map<String, Object> data = new HashMap<>();
             data.put("orders", orders);
             data.put("total", orders.size());
+            data.put("timestamp", java.time.LocalDateTime.now().toString());
             
-            return ApiResponseUtil.success(data, "Orders retrieved successfully");
+            // Create response with cache control headers to prevent stale data
+            Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("success", true);
+            responseBody.put("message", "Orders retrieved successfully");
+            responseBody.put("data", data);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
+            headers.add("Pragma", "no-cache");
+            headers.add("Expires", "0");
+            
+            return ResponseEntity.ok().headers(headers).body(responseBody);
         } catch (Exception e) {
             return ApiResponseUtil.internalError("Failed to retrieve orders: " + e.getMessage());
         }
@@ -359,6 +389,71 @@ public class OrderController {
         }
     }
 
+    @PostMapping("/cancel")
+    public ResponseEntity<Map<String, Object>> cancelOrder(@Valid @RequestBody CancelOrderRequest cancelRequest) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Find the order
+            OrderEntity order = orderRepository.findById(cancelRequest.getOrderId())
+                    .orElseThrow(() -> new RuntimeException("Order not found"));
+            
+            // Check if order can be cancelled (only PENDING orders can be cancelled)
+            if (order.getStatus() != OrderEntity.OrderStatus.PENDING) {
+                response.put("success", false);
+                response.put("error", "Only pending orders can be cancelled");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Update order status and cancellation details
+            order.setStatus(OrderEntity.OrderStatus.CANCELLED);
+            order.setCancellationReason(cancelRequest.getReason());
+            order.setCancelledAt(LocalDateTime.now());
+            order.setUpdatedAt(LocalDateTime.now());
+            
+            // Save the updated order
+            orderRepository.save(order);
+            
+            response.put("success", true);
+            response.put("message", "Order cancelled successfully");
+            response.put("orderId", order.getId());
+            response.put("cancellationReason", order.getCancellationReason());
+            response.put("cancelledAt", order.getCancelledAt());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", "Failed to cancel order: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @GetMapping("/cancellation-reasons")
+    public ResponseEntity<Map<String, Object>> getCancellationReasons() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            List<Map<String, String>> reasons = new ArrayList<>();
+            for (CancelOrderRequest.CancellationReason reason : CancelOrderRequest.CancellationReason.values()) {
+                Map<String, String> reasonMap = new HashMap<>();
+                reasonMap.put("value", reason.name());
+                reasonMap.put("displayName", reason.getDisplayName());
+                reasons.add(reasonMap);
+            }
+            
+            response.put("success", true);
+            response.put("reasons", reasons);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", "Failed to get cancellation reasons: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
     private Map<String, Object> convertToSimpleOrder(OrderEntity entity) {
         Map<String, Object> order = new HashMap<>();
         order.put("id", entity.getId());
@@ -412,6 +507,8 @@ public class OrderController {
         order.put("paymentMethod", entity.getPaymentMethod());
         order.put("waybillProofUrl", entity.getWaybillProofUrl());
         order.put("deliveryProofUrl", entity.getDeliveryProofUrl());
+        order.put("cancellationReason", entity.getCancellationReason());
+        order.put("cancelledAt", entity.getCancelledAt());
         
         // Add user info without circular reference
         if (entity.getUser() != null) {
@@ -424,11 +521,11 @@ public class OrderController {
             order.put("user", user);
         }
         
-        // Add order items with product data - force loading of lazy relationships
+        // Add order items with product data - use repository to avoid lazy loading issues
         List<Map<String, Object>> items = new ArrayList<>();
         try {
-            // Force loading of order items by accessing the collection
-            List<com.pecenio.datamodel.entity.OrderItemEntity> orderItems = entity.getOrderItems();
+            // Use repository to load order items to avoid lazy loading issues
+            List<com.pecenio.datamodel.entity.OrderItemEntity> orderItems = orderItemRepository.findByOrder(entity);
             if (orderItems != null && !orderItems.isEmpty()) {
                 for (com.pecenio.datamodel.entity.OrderItemEntity itemEntity : orderItems) {
                     Map<String, Object> item = new HashMap<>();
@@ -437,7 +534,7 @@ public class OrderController {
                     item.put("price", itemEntity.getPrice());
                     item.put("compatibility", itemEntity.getCompatibility());
                     
-                    // Force loading of product data by accessing the product
+                    // Load product data safely
                     try {
                         com.pecenio.datamodel.entity.ProductEntity productEntity = itemEntity.getProduct();
                         if (productEntity != null) {
@@ -449,10 +546,28 @@ public class OrderController {
                             product.put("category", productEntity.getCategory());
                             product.put("partNumber", productEntity.getPartNumber());
                             item.put("product", product);
+                        } else {
+                            // Add empty product if product is null
+                            Map<String, Object> product = new HashMap<>();
+                            product.put("id", 0);
+                            product.put("name", "Unknown Product");
+                            product.put("brand", "Unknown");
+                            product.put("imageUrl", "");
+                            product.put("category", "Unknown");
+                            product.put("partNumber", "");
+                            item.put("product", product);
                         }
                     } catch (Exception e) {
-                        // If product loading fails, continue without product data
+                        // If product loading fails, add empty product
                         System.err.println("Error loading product for order item: " + e.getMessage());
+                        Map<String, Object> product = new HashMap<>();
+                        product.put("id", 0);
+                        product.put("name", "Unknown Product");
+                        product.put("brand", "Unknown");
+                        product.put("imageUrl", "");
+                        product.put("category", "Unknown");
+                        product.put("partNumber", "");
+                        item.put("product", product);
                     }
                     
                     items.add(item);
@@ -461,6 +576,7 @@ public class OrderController {
         } catch (Exception e) {
             // If order items loading fails, continue with empty items
             System.err.println("Error loading order items: " + e.getMessage());
+            e.printStackTrace();
         }
         order.put("items", items);
         

@@ -130,11 +130,11 @@ export class CheckoutComponent implements OnInit {
         // Check if the response indicates success
         if (response && response.success) {
           try {
-            // Only remove the items that were purchased, not the entire cart
-            this.cartService.removePurchasedItems(this.items);
+            // Clear the entire cart after successful checkout
+            this.cartService.clearEntireCart();
             this.cartService.clearCheckoutSession();
           } catch (error) {
-            console.error('Error clearing purchased items from cart:', error);
+            console.error('Error clearing cart after checkout:', error);
           }
           this.router.navigate(['/orders']);
         } else {

@@ -46,4 +46,8 @@ public class Order {
     // Proof images
     private String waybillProofUrl;
     private String deliveryProofUrl;
+    
+    // Cancellation information
+    private String cancellationReason;
+    private LocalDateTime cancelledAt;
 }

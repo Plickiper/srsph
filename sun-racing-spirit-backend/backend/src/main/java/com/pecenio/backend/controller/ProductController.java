@@ -68,48 +68,6 @@ public class ProductController {
         }
     }
     
-    @GetMapping("/test-db")
-    public ResponseEntity<Map<String, Object>> testDatabase() {
-        try {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Database connection test");
-            response.put("timestamp", java.time.LocalDateTime.now());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", "Database test failed: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-    
-    @GetMapping("/debug/{id}")
-    public ResponseEntity<Map<String, Object>> debugProduct(@PathVariable Long id) {
-        try {
-            Optional<Product> product = productService.getProductById(id);
-            if (product.isPresent()) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", true);
-                response.put("product", product.get());
-                response.put("variants_raw", product.get().getVariants());
-                response.put("compatibility_raw", product.get().getCompatibility());
-                response.put("stock_quantity_raw", product.get().getStockQuantity());
-                response.put("price_raw", product.get().getPrice());
-                return ResponseEntity.ok(response);
-            } else {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("error", "Product not found");
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-            }
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", "Failed to retrieve product: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createProduct(@Valid @RequestBody ProductRequest productRequest, HttpServletRequest request) {
@@ -144,15 +102,11 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> updateProduct(@PathVariable Long id, @RequestBody Map<String, Object> requestBody, HttpServletRequest request) {
         try {
-            System.out.println("Update product request received for ID: " + id);
-            System.out.println("Request body keys: " + requestBody.keySet());
             
             // Extract product and user information from request
             Product product = extractProductFromRequest(requestBody);
             String currentUser = extractCurrentUserFromRequest(requestBody);
             
-            System.out.println("Extracted product: " + product.getName());
-            System.out.println("Images field: " + product.getImages());
             
             Product updatedProduct = productService.updateProduct(id, product);
             
@@ -453,9 +407,6 @@ public class ProductController {
         if (requestBody.containsKey("compatibility")) {
             product.setCompatibility((String) requestBody.get("compatibility"));
         }
-        if (requestBody.containsKey("material")) {
-            product.setMaterial((String) requestBody.get("material"));
-        }
         if (requestBody.containsKey("price")) {
             Object priceObj = requestBody.get("price");
             if (priceObj instanceof Number) {
@@ -485,7 +436,6 @@ public class ProductController {
         }
         if (requestBody.containsKey("variants")) {
             String variantsJson = (String) requestBody.get("variants");
-            System.out.println("Received variants JSON: " + variantsJson);
             product.setVariants(variantsJson);
         }
         if (requestBody.containsKey("isPublished")) {
@@ -506,7 +456,6 @@ public class ProductController {
         product.setCategory(request.getCategory());
         product.setPartNumber(request.getPartNumber());
         product.setCompatibility(request.getCompatibility());
-        product.setMaterial(request.getMaterial());
         product.setPrice(request.getPrice());
         product.setStockQuantity(request.getStockQuantity());
         product.setDescription(request.getDescription());

@@ -5,6 +5,7 @@
       <button class="tab" [class.active]="tab==='TO_SHIP'" (click)="setTab('TO_SHIP')">To Ship</button>
       <button class="tab" [class.active]="tab==='TO_RECEIVE'" (click)="setTab('TO_RECEIVE')">To Receive</button>
       <button class="tab" [class.active]="tab==='COMPLETED'" (click)="setTab('COMPLETED')">Completed</button>
+      <button class="tab" [class.active]="tab==='CANCELLED'" (click)="setTab('CANCELLED')">Cancelled</button>
     </div>
     <div class="order-list" *ngIf="filtered && filtered.length; else empty">
       <div class="order-card" *ngFor="let o of filtered">
@@ -13,7 +14,7 @@
             <div class="order-id">Order #{{ o.id }}</div>
             <div class="order-timestamp">{{ formatTimestamp(o.createdAt) }}</div>
           </div>
-          <div class="order-status" [class.placed]="o.status==='PENDING'" [class.out]="o.status==='SHIPPED'" [class.delivered]="o.status==='DELIVERED'">{{ formatStatus(o.status) }}</div>
+          <div class="order-status" [class.placed]="o.status==='PENDING'" [class.out]="o.status==='SHIPPED'" [class.delivered]="o.status==='DELIVERED'" [class.cancelled]="o.status==='CANCELLED'">{{ formatStatus(o.status) }}</div>
         </div>
         <div class="items">
           <div class="item" *ngFor="let it of o.items">
@@ -26,9 +27,34 @@
             <div class="amount">₱{{ (it.price * it.quantity) | number:'1.0-0' }}</div>
           </div>
         </div>
-        <div class="order-total">Total: ₱{{ grandTotal(o) | number:'1.0-0' }}</div>
+        <!-- Total and Cancel Button Row for PENDING orders -->
+        <div class="order-total-row" *ngIf="o.status === 'PENDING'">
+          <div class="action-buttons">
+            <button class="cancel-btn" (click)="showCancelModal(o)" title="Cancel Order">
+              Cancel Order
+            </button>
+          </div>
+          <div class="order-total">Total: ₱{{ grandTotal(o) | number:'1.0-0' }}</div>
+        </div>
+        
+        <!-- Total and Buy Again Button Row for CANCELLED orders -->
+        <div class="order-total-row" *ngIf="o.status === 'CANCELLED'">
+          <div class="action-buttons">
+            <button class="buy-again-btn" (click)="buyAgain(o)" title="Buy Again">
+              Buy Again
+            </button>
+          </div>
+          <div class="order-total">Total: ₱{{ grandTotal(o) | number:'1.0-0' }}</div>
+        </div>
+        
+        <!-- Regular Total for other orders -->
+        <div class="order-total" *ngIf="o.status !== 'PENDING' && o.status !== 'CANCELLED' && o.status !== 'DELIVERED'">Total: ₱{{ grandTotal(o) | number:'1.0-0' }}</div>
+        
         <div class="order-actions" *ngIf="o.status === 'DELIVERED'">
           <div class="action-buttons">
+            <button class="buy-again-btn" (click)="buyAgain(o)" title="Buy Again">
+              Buy Again
+            </button>
             <button class="proof-icon-btn" *ngIf="o.deliveryProofUrl" (click)="showDeliveryProof(o.deliveryProofUrl)" title="View Proof of Delivery">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -47,6 +73,7 @@
               </svg>
             </button>
           </div>
+          <div class="order-total">Total: ₱{{ grandTotal(o) | number:'1.0-0' }}</div>
         </div>
       </div>
     </div>
@@ -152,6 +179,75 @@
         <div class="modal-actions">
           <button class="cancel-btn" (click)="closeRatingModal()">Cancel</button>
           <button class="submit-btn" (click)="submitRating()" [disabled]="currentRating === 0">Submit Rating</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cancel Order Modal -->
+<div class="modal-overlay" *ngIf="showCancelModalFlag" (click)="closeCancelModal()">
+  <div class="modal-content cancel-order-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Cancel Order</h3>
+      <button class="close-btn" (click)="closeCancelModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="cancel-form">
+        <div class="order-info">
+          <h4>Order #{{ selectedOrder?.id }}</h4>
+          <div class="products-list">
+            <div class="product-item" *ngFor="let item of selectedOrder?.items">
+              <div class="product-details">
+                <p class="product-name">{{ item.product?.name || 'Product' }}</p>
+                <div class="variants-list" *ngIf="item.compatibility">
+                  <span class="variant-label">Variant:</span>
+                  <span class="variant-item">{{ item.compatibility }}</span>
+                </div>
+                <div class="item-quantity-price">
+                  <span class="quantity">x{{ item.quantity }}</span>
+                  <span class="price">₱{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="order-total">Total: ₱{{ grandTotal(selectedOrder) | number:'1.0-0' }}</div>
+        </div>
+        
+        <div class="cancellation-section">
+          <label for="cancellation-reason">Please select a reason for cancellation:</label>
+          <select 
+            id="cancellation-reason" 
+            [(ngModel)]="selectedCancellationReason" 
+            class="reason-select"
+            required
+          >
+            <option value="">Select a reason...</option>
+            <option *ngFor="let reason of cancellationReasons" [value]="reason.value">
+              {{ reason.displayName }}
+            </option>
+          </select>
+          
+          <div class="custom-reason-section" *ngIf="selectedCancellationReason === 'OTHER'">
+            <label for="custom-reason">Please specify:</label>
+            <textarea 
+              id="custom-reason" 
+              [(ngModel)]="customCancellationReason" 
+              class="custom-reason-textarea"
+              placeholder="Please provide details about why you're cancelling this order..."
+              rows="3"
+            ></textarea>
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button 
+            class="submit-btn" 
+            (click)="confirmCancellation()" 
+            [disabled]="!selectedCancellationReason || (selectedCancellationReason === 'OTHER' && !customCancellationReason.trim())"
+          >
+            Confirm Cancellation
+          </button>
         </div>
       </div>
     </div>

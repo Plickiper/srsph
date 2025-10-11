@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, catchError, of } from 'rxjs';
+import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, tap, catchError, of, throwError, timer, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface AdminUser {
@@ -33,6 +33,15 @@ export interface LoginResponse {
   error?: string;
 }
 
+export interface RefreshTokenResponse {
+  success: boolean;
+  message?: string;
+  token?: string;
+  user?: AdminUser;
+  permissions?: AdminPermissions;
+  error?: string;
+}
+
 export interface CreateStaffRequest {
   username: string;
   email: string;
@@ -45,9 +54,11 @@ export interface CreateStaffRequest {
 export interface UpdateStaffRequest {
   firstName?: string;
   lastName?: string;
+  username?: string;
   email?: string;
   phoneNumber?: string;
   isActive?: boolean;
+  newPassword?: string;
 }
 
 @Injectable({
@@ -58,6 +69,10 @@ export class AdminAuthService {
   private currentUserSubject = new BehaviorSubject<AdminUser | null>(null);
   private permissionsSubject = new BehaviorSubject<AdminPermissions | null>(null);
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  private tokenRefreshTimer?: any;
+  private inactivityTimer?: any;
+  private readonly TOKEN_REFRESH_INTERVAL = 7 * 60 * 60 * 1000; // 7 hours (refresh before 8-hour expiry)
+  private readonly INACTIVITY_TIMEOUT = 8 * 60 * 60 * 1000; // 8 hours of inactivity
 
   public currentUser$ = this.currentUserSubject.asObservable();
   public permissions$ = this.permissionsSubject.asObservable();
@@ -65,6 +80,8 @@ export class AdminAuthService {
 
   constructor(private http: HttpClient) {
     this.loadStoredAuth();
+    this.startTokenRefreshTimer();
+    this.startInactivityTimer();
   }
 
   login(usernameOrEmail: string, password: string): Observable<LoginResponse> {
@@ -80,9 +97,53 @@ export class AdminAuthService {
             this.setCurrentUser(response.user);
             this.setPermissions(response.permissions);
             this.storeAuth(response.user, response.permissions, response.token);
+            this.startTokenRefreshTimer();
+            this.startInactivityTimer();
           }
         })
       );
+  }
+
+  refreshToken(): Observable<RefreshTokenResponse> {
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      return throwError(() => new Error('No token available for refresh'));
+    }
+
+    return this.http.post<RefreshTokenResponse>(`${this.apiUrl}/admin/refresh-token`, { token })
+      .pipe(
+        tap(response => {
+          if (response.success && response.token) {
+            // Update stored token
+            localStorage.setItem('admin_token', response.token);
+            // Restart refresh timer
+            this.startTokenRefreshTimer();
+          }
+        }),
+        catchError((error: HttpErrorResponse) => {
+          console.error('Token refresh failed:', error);
+          // If refresh fails, clear auth and logout
+          this.clearAuth();
+          return throwError(() => error);
+        })
+      );
+  }
+
+  validateSession(): Observable<boolean> {
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      this.clearAuth();
+      return of(false);
+    }
+
+    // Try to refresh token to validate session
+    return this.refreshToken().pipe(
+      map(() => true),
+      catchError(() => {
+        this.clearAuth();
+        return of(false);
+      })
+    );
   }
 
   getCurrentUser(): AdminUser | null {
@@ -149,6 +210,10 @@ export class AdminAuthService {
   }
 
   logout(): Observable<{success: boolean, message?: string}> {
+    // Stop all timers
+    this.stopTokenRefreshTimer();
+    this.stopInactivityTimer();
+    
     // Try to get headers, but don't fail if user is already logged out
     let headers: HttpHeaders;
     try {
@@ -182,6 +247,8 @@ export class AdminAuthService {
   }
 
   private clearAuth(): void {
+    this.stopTokenRefreshTimer();
+    this.stopInactivityTimer();
     this.currentUserSubject.next(null);
     this.permissionsSubject.next(null);
     this.isAuthenticatedSubject.next(false);
@@ -222,11 +289,66 @@ export class AdminAuthService {
       throw new Error('User not authenticated');
     }
 
+    const currentUser = this.getCurrentUser();
+    const adminRole = currentUser?.role || 'SUPER_ADMIN';
+
     const headers = new HttpHeaders({
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Admin-Role': adminRole
     });
     
     return headers;
+  }
+
+  private startTokenRefreshTimer(): void {
+    this.stopTokenRefreshTimer(); // Clear any existing timer
+    
+    if (this.isAuthenticated()) {
+      this.tokenRefreshTimer = setTimeout(() => {
+        console.log('Refreshing token...');
+        this.refreshToken().subscribe({
+          next: () => {
+            console.log('Token refreshed successfully');
+          },
+          error: (error) => {
+            console.error('Token refresh failed, logging out:', error);
+            this.clearAuth();
+          }
+        });
+      }, this.TOKEN_REFRESH_INTERVAL);
+    }
+  }
+
+  private stopTokenRefreshTimer(): void {
+    if (this.tokenRefreshTimer) {
+      clearTimeout(this.tokenRefreshTimer);
+      this.tokenRefreshTimer = undefined;
+    }
+  }
+
+  private startInactivityTimer(): void {
+    this.stopInactivityTimer();
+    
+    if (this.isAuthenticated()) {
+      this.inactivityTimer = setTimeout(() => {
+        console.log('User inactive for too long, logging out...');
+        this.clearAuth();
+      }, this.INACTIVITY_TIMEOUT);
+    }
+  }
+
+  private stopInactivityTimer(): void {
+    if (this.inactivityTimer) {
+      clearTimeout(this.inactivityTimer);
+      this.inactivityTimer = undefined;
+    }
+  }
+
+  // Method to reset inactivity timer (call this on user activity)
+  public resetInactivityTimer(): void {
+    if (this.isAuthenticated()) {
+      this.startInactivityTimer();
+    }
   }
 }

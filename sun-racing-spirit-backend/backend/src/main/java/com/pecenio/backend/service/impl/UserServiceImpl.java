@@ -65,12 +65,31 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User updateUser(Long id, User user) {
+        
         Optional<UserEntity> existingEntity = userRepository.findById(id);
         if (existingEntity.isPresent()) {
             UserEntity entity = existingEntity.get();
+            // Validate password if it's being updated and not empty
+            if (user.getPassword() != null && !user.getPassword().trim().isEmpty()) {
+                // Check if the password is already hashed (starts with $2a$ or $2b$)
+                if (!user.getPassword().startsWith("$2a$") && !user.getPassword().startsWith("$2b$")) {
+                    // Password is not hashed, validate and hash it
+                    if (!passwordService.isValidPassword(user.getPassword())) {
+                        throw new RuntimeException(passwordService.getPasswordRequirements());
+                    }
+                    user.setPassword(passwordService.hashPassword(user.getPassword()));
+                }
+                // If password is already hashed, use it as-is
+            }
+            
             entity.updateFromBusinessModel(user);
-            UserEntity savedEntity = userRepository.save(entity);
-            return savedEntity.toBusinessModel();
+            
+            try {
+                UserEntity savedEntity = userRepository.save(entity);
+                return savedEntity.toBusinessModel();
+            } catch (Exception e) {
+                throw new RuntimeException("Database error: " + e.getMessage(), e);
+            }
         }
         throw new RuntimeException("User not found with id: " + id);
     }

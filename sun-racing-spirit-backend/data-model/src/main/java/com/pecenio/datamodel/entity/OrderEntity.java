@@ -61,6 +61,13 @@ public class OrderEntity {
     
     @Column(name = "delivery_proof_url", length = 500)
     private String deliveryProofUrl;
+    
+    // Cancellation information
+    @Column(name = "cancellation_reason", length = 500)
+    private String cancellationReason;
+    
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
 
     public enum OrderStatus {
         PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
@@ -77,6 +84,8 @@ public class OrderEntity {
         this.paymentMethod = order.getPaymentMethod();
         this.waybillProofUrl = order.getWaybillProofUrl();
         this.deliveryProofUrl = order.getDeliveryProofUrl();
+        this.cancellationReason = order.getCancellationReason();
+        this.cancelledAt = order.getCancelledAt();
     }
 
     // Convert to business model
@@ -94,6 +103,8 @@ public class OrderEntity {
         order.setPaymentMethod(this.paymentMethod);
         order.setWaybillProofUrl(this.waybillProofUrl);
         order.setDeliveryProofUrl(this.deliveryProofUrl);
+        order.setCancellationReason(this.cancellationReason);
+        order.setCancelledAt(this.cancelledAt);
         
         if (this.orderItems != null) {
             order.setOrderItems(this.orderItems.stream()

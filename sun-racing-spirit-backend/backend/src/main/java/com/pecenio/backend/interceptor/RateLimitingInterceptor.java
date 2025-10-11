@@ -18,7 +18,7 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
     @Value("${app.rate-limiting.enabled:true}")
     private boolean rateLimitingEnabled;
     
-    @Value("${app.rate-limiting.max-attempts:20}")
+    @Value("${app.rate-limiting.max-attempts:100}")
     private int maxAttempts;
     
     @Value("${app.rate-limiting.window-minutes:5}")
@@ -44,8 +44,11 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
             rateLimitInfo.reset(now);
         }
         
+        // Different rate limits for different endpoint types
+        int effectiveMaxAttempts = getEffectiveMaxAttempts(endpoint);
+        
         // Check if limit exceeded
-        if (rateLimitInfo.getAttempts() >= maxAttempts) {
+        if (rateLimitInfo.getAttempts() >= effectiveMaxAttempts) {
             response.setStatus(429); // TOO_MANY_REQUESTS
             response.setContentType("application/json");
             response.getWriter().write("{\"success\":false,\"error\":\"Too many requests. Please try again later.\",\"retryAfter\":" + 
@@ -67,6 +70,26 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
     // Method to clear rate limits for specific IP
     public void clearRateLimitsForIp(String ip) {
         rateLimitMap.entrySet().removeIf(entry -> entry.getKey().startsWith(ip + ":"));
+    }
+    
+    private int getEffectiveMaxAttempts(String endpoint) {
+        // Admin endpoints get higher limits for polling
+        if (endpoint.contains("/api/auth/admin/staff") || 
+            endpoint.contains("/api/auth/admin/dashboard") ||
+            endpoint.contains("/api/orders")) {
+            return maxAttempts; // Use full limit for admin endpoints
+        }
+        
+        // Auth endpoints get lower limits for security
+        if (endpoint.contains("/api/auth/login") || 
+            endpoint.contains("/api/auth/register") ||
+            endpoint.contains("/api/customer/auth/login") ||
+            endpoint.contains("/api/customer/auth/register")) {
+            return Math.max(10, maxAttempts / 4); // 25% of max for auth
+        }
+        
+        // Default to full limit
+        return maxAttempts;
     }
     
     private String getClientIpAddress(HttpServletRequest request) {

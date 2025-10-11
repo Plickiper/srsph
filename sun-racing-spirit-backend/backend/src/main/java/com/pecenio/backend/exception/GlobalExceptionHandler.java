@@ -3,6 +3,7 @@ package com.pecenio.backend.exception;
 import com.pecenio.backend.util.ApiResponseUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -32,8 +33,13 @@ public class GlobalExceptionHandler {
         return ApiResponseUtil.error(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        return ApiResponseUtil.error("Invalid JSON format: " + ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
-        return ApiResponseUtil.internalError("An unexpected error occurred");
+        return ApiResponseUtil.internalError("An unexpected error occurred: " + ex.getMessage());
     }
 }

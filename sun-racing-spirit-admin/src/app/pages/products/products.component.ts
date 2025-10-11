@@ -13,7 +13,6 @@ import { AdminProductService, Product } from '../../services/admin-product.servi
       <div class="page-header">
         <div class="header-content">
         <h1>Products</h1>
-        <p>Manage your Sun Racing Spirit aftermarket parts inventory</p>
         </div>
         <div class="header-actions">
           <button class="btn btn-primary" (click)="goToAddProduct()">
@@ -65,8 +64,22 @@ import { AdminProductService, Product } from '../../services/admin-product.servi
         </div>
       </div>
 
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Loading products...</p>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="errorMessage && !loading" class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h3>Unable to Load Products</h3>
+        <p>{{ errorMessage }}</p>
+        <button class="btn btn-primary" (click)="loadProducts()">Try Again</button>
+      </div>
+
       <!-- Products Table -->
-      <div class="products-table-container">
+      <div *ngIf="!loading && !errorMessage" class="products-table-container">
         <div class="table-header">
           <div class="table-info">
             <span class="product-count">{{ filteredProducts.length }} products</span>
@@ -399,6 +412,59 @@ import { AdminProductService, Product } from '../../services/admin-product.servi
     .header-actions {
       display: flex;
       gap: 12px;
+    }
+    
+    /* Loading and Error States */
+    .loading-container, .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      text-align: center;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 140, 0, 0.3);
+      border-radius: 50%;
+      border-top-color: #ff8c00;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-container p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1.1rem;
+    }
+    
+    .error-container {
+      background: rgba(239, 68, 68, 0.05);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 16px;
+      margin-bottom: 40px;
+    }
+    
+    .error-icon {
+      font-size: 3rem;
+      margin-bottom: 20px;
+    }
+    
+    .error-container h3 {
+      color: #ef4444;
+      margin-bottom: 12px;
+      font-size: 1.5rem;
+    }
+    
+    .error-container p {
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 24px;
+      max-width: 400px;
     }
     
     .filters-section {
@@ -1611,6 +1677,7 @@ export class ProductsComponent implements OnInit, AfterViewInit {
   selectedCategory = '';
   errorMessage = '';
   showInventoryModal = false;
+  loading = true;
   showLowStock = false;
   showOutOfStock = false;
   showAll = true;
@@ -1649,6 +1716,9 @@ export class ProductsComponent implements OnInit, AfterViewInit {
   }
 
   loadProducts(): void {
+    this.loading = true;
+    this.errorMessage = '';
+    
     this.productService.getAllProducts().subscribe({
       next: (response: any) => {
         if (response.success && response.products) {
@@ -1663,10 +1733,12 @@ export class ProductsComponent implements OnInit, AfterViewInit {
             }, 0);
           }
         }
+        this.loading = false;
       },
       error: (error: any) => {
         console.error('Error loading products:', error);
         this.errorMessage = 'Failed to load products. Please try again.';
+        this.loading = false;
       }
     });
   }

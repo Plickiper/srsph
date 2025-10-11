@@ -21,8 +21,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ProductRepository productRepository;
-    
-    @Autowired
 
     @Override
     @Transactional(readOnly = true)
@@ -198,23 +196,17 @@ public class ProductServiceImpl implements ProductService {
         if (newArrivalsCount > 5) {
             // The system will naturally handle this with FIFO since we only show the 5 most recent
             // in the frontend, but we can add additional logic here if needed
-            System.out.println("New arrivals count: " + newArrivalsCount + " (limit: 5)");
         }
     }
 
     // Helper method to extract brand from product variants, name, and compatibility
     private String extractBrandFromVariants(Product product) {
-        System.out.println("Extracting brand for product: " + product.getName());
-        System.out.println("Product variants: " + product.getVariants());
-        System.out.println("Product compatibility: " + product.getCompatibility());
         
         // First, check the product name for brand indicators
         String productName = product.getName().toLowerCase();
         if (productName.contains("yamaha") || productName.contains("mio") || productName.contains("aerox") || productName.contains("nmax")) {
-            System.out.println("Found Yamaha in product name: " + product.getName());
             return "Yamaha";
         } else if (productName.contains("honda") || productName.contains("click") || productName.contains("pcx") || productName.contains("beat")) {
-            System.out.println("Found Honda in product name: " + product.getName());
             return "Honda";
         }
         
@@ -222,10 +214,8 @@ public class ProductServiceImpl implements ProductService {
         if (product.getCompatibility() != null) {
             String compatibility = product.getCompatibility().toLowerCase();
             if (compatibility.contains("yamaha") || compatibility.contains("mio") || compatibility.contains("aerox") || compatibility.contains("nmax")) {
-                System.out.println("Found Yamaha in compatibility: " + product.getCompatibility());
                 return "Yamaha";
             } else if (compatibility.contains("honda") || compatibility.contains("click") || compatibility.contains("pcx") || compatibility.contains("beat")) {
-                System.out.println("Found Honda in compatibility: " + product.getCompatibility());
                 return "Honda";
             }
         }
@@ -239,22 +229,18 @@ public class ProductServiceImpl implements ProductService {
                     new TypeReference<List<Map<String, Object>>>() {}
                 );
 
-                System.out.println("Parsed variants count: " + variants.size());
 
                 // Extract brands from variant models
                 Set<String> brands = new HashSet<>();
                 for (Map<String, Object> variant : variants) {
                     String model = (String) variant.get("model");
-                    System.out.println("Checking model: " + model);
                     if (model != null) {
                         String modelLower = model.toLowerCase();
                         // Check if model contains Yamaha or Honda
                         if (modelLower.contains("yamaha") || modelLower.contains("mio") || modelLower.contains("aerox") || modelLower.contains("nmax")) {
                             brands.add("Yamaha");
-                            System.out.println("Found Yamaha in model: " + model);
                         } else if (modelLower.contains("honda") || modelLower.contains("click") || modelLower.contains("pcx") || modelLower.contains("beat")) {
                             brands.add("Honda");
-                            System.out.println("Found Honda in model: " + model);
                         }
                     }
                 }
@@ -262,32 +248,26 @@ public class ProductServiceImpl implements ProductService {
                 // Return the first brand found
                 if (!brands.isEmpty()) {
                     String extractedBrand = brands.iterator().next();
-                    System.out.println("Extracted brand from variants: " + extractedBrand);
                     return extractedBrand;
                 }
             } catch (Exception e) {
                 System.err.println("Error parsing variants for brand extraction: " + e.getMessage());
             }
         } else {
-            System.out.println("No variants found");
         }
 
-        System.out.println("No brand indicators found, using fallback brand: " + product.getBrand());
         return product.getBrand(); // Fallback to existing brand field
     }
 
     // Helper method to check if product matches brand filter based on variants
     private boolean matchesBrandFilter(Product product, String brandFilter) {
-        System.out.println("Checking brand filter for product: " + product.getName() + ", filter: " + brandFilter);
         
         if (brandFilter == null || brandFilter.isEmpty()) {
-            System.out.println("No brand filter, returning true");
             return true;
         }
 
         String extractedBrand = extractBrandFromVariants(product);
         boolean matches = brandFilter.equalsIgnoreCase(extractedBrand);
-        System.out.println("Brand match result: " + matches + " (extracted: " + extractedBrand + ", filter: " + brandFilter + ")");
         return matches;
     }
 

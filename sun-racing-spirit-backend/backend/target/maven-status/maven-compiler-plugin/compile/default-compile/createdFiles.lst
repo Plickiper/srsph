@@ -1,6 +1,7 @@
 com\pecenio\backend\controller\AuthController$CreateStaffRequest.class
 com\pecenio\backend\service\impl\ProductServiceImpl.class
 com\pecenio\backend\controller\GuestCartController.class
+com\pecenio\backend\dto\CancelOrderRequest.class
 com\pecenio\backend\config\DataInitializer.class
 com\pecenio\backend\service\impl\UserServiceImpl.class
 com\pecenio\backend\config\WebConfig.class
@@ -13,6 +14,7 @@ com\pecenio\backend\controller\AuthController.class
 com\pecenio\backend\controller\OrderController.class
 com\pecenio\backend\config\ProductDataSeeder.class
 com\pecenio\backend\controller\ProductController.class
+com\pecenio\backend\dto\CancelOrderRequest$CancellationReason.class
 com\pecenio\backend\service\JwtService.class
 com\pecenio\backend\dto\OrderRequest.class
 com\pecenio\backend\dto\LoginRequest.class

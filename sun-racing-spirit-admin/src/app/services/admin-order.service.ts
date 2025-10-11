@@ -54,9 +54,10 @@ export class AdminOrderService {
   constructor(private http: HttpClient) {}
 
   getRecentOrders(limit: number = 10): Observable<Order[]> {
-    return this.http.get<{success: boolean, data: {orders: any[]}}>(`${this.apiUrl}/orders?limit=${limit}&sort=createdAt&order=desc`).pipe(
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    return this.http.get<{success: boolean, data: {orders: any[], timestamp?: string}}>(`${this.apiUrl}/orders?limit=${limit}&sort=createdAt&order=desc&_t=${timestamp}`).pipe(
       map(response => {
-        console.log('Admin recent orders response:', response); // Debug log
         if (response.success && response.data && response.data.orders) {
           return response.data.orders.map(order => {
         const itemsTotal = order.totalAmount || 0; // This is items total from backend
@@ -82,6 +83,8 @@ export class AdminOrderService {
           user: order.user || null, // Include user object for modal template
           waybillProofUrl: order.waybillProofUrl || null, // For waybill proof display
           deliveryProofUrl: order.deliveryProofUrl || null, // For delivery proof display
+          cancellationReason: order.cancellationReason || null, // For cancellation reason display
+          cancelledAt: order.cancelledAt || null, // For cancellation date display
           createdAt: order.createdAt,
           updatedAt: order.updatedAt
         };
@@ -96,7 +99,6 @@ export class AdminOrderService {
   getAllOrders(): Observable<Order[]> {
     return this.http.get<{success: boolean, data: {orders: any[]}}>(`${this.apiUrl}/orders`).pipe(
       map(response => {
-        console.log('Admin orders response:', response); // Debug log
         if (response.success && response.data && response.data.orders) {
           return response.data.orders.map(order => {
         const itemsTotal = order.totalAmount || 0; // This is items total from backend
@@ -122,6 +124,8 @@ export class AdminOrderService {
           user: order.user || null, // Include user object for modal template
           waybillProofUrl: order.waybillProofUrl || null, // For waybill proof display
           deliveryProofUrl: order.deliveryProofUrl || null, // For delivery proof display
+          cancellationReason: order.cancellationReason || null, // For cancellation reason display
+          cancelledAt: order.cancelledAt || null, // For cancellation date display
           createdAt: order.createdAt,
           updatedAt: order.updatedAt
         };

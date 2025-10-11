@@ -3,6 +3,7 @@ package com.pecenio.backend.controller;
 import com.pecenio.backend.service.UserService;
 import com.pecenio.backend.service.AuditLogService;
 import com.pecenio.backend.service.JwtService;
+import com.pecenio.backend.service.PasswordService;
 import com.pecenio.backend.util.JwtAuthUtil;
 import com.pecenio.businessmodel.entity.User;
 import com.pecenio.businessmodel.entity.AuditLog;
@@ -12,18 +13,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201", "http://localhost:53515", "http://localhost:51316"})
 public class AuthController {
 
     @Autowired
@@ -40,6 +39,9 @@ public class AuthController {
     
     @Autowired
     private JwtAuthUtil jwtAuthUtil;
+    
+    @Autowired
+    private PasswordService passwordService;
 
 
     @PostMapping("/admin/login")
@@ -198,7 +200,6 @@ public class AuthController {
             }
             
             Long userId = jwtAuthUtil.getUserIdFromToken(token);
-            String role = jwtAuthUtil.getRoleFromToken(token);
             
             // Log the logout action
             auditLogService.logAction(
@@ -288,6 +289,7 @@ public class AuthController {
                 .body(createErrorResponse("Authentication failed: " + e.getMessage()));
         }
     }
+
 
     @GetMapping("/admin/staff")
     public ResponseEntity<Map<String, Object>> getAllStaff(HttpServletRequest request) {
@@ -472,7 +474,6 @@ public class AuthController {
                     .body(createErrorResponse("Staff member not found"));
             }
             
-            UserEntity existingUser = userEntity.get();
             // Permanently delete the user from database
             userRepository.deleteById(id);
             
@@ -496,6 +497,7 @@ public class AuthController {
             @RequestBody UpdateStaffRequest request,
             @RequestHeader("Admin-Role") String adminRole) {
         
+        
         // Validate request
         if (request == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -517,6 +519,7 @@ public class AuthController {
             
             User existingUser = user.get();
             
+            
             // Only update fields that are provided in the request
             if (request.getFirstName() != null) {
                 existingUser.setFirstName(request.getFirstName());
@@ -525,9 +528,23 @@ public class AuthController {
                 existingUser.setLastName(request.getLastName());
             }
             if (request.getUsername() != null) {
+                // Check if username is being changed and if new username already exists
+                if (!existingUser.getUsername().equals(request.getUsername())) {
+                    if (userService.existsByUsername(request.getUsername())) {
+                        return ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body(createErrorResponse("Username already exists: " + request.getUsername()));
+                    }
+                }
                 existingUser.setUsername(request.getUsername());
             }
             if (request.getEmail() != null) {
+                // Check if email is being changed and if new email already exists
+                if (!existingUser.getEmail().equals(request.getEmail())) {
+                    if (userService.existsByEmail(request.getEmail())) {
+                        return ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body(createErrorResponse("Email already exists: " + request.getEmail()));
+                    }
+                }
                 existingUser.setEmail(request.getEmail());
             }
             if (request.getPhoneNumber() != null) {
@@ -536,6 +553,19 @@ public class AuthController {
             if (request.getIsActive() != null) {
                 existingUser.setIsActive(request.getIsActive());
             }
+            
+            // Handle password change if provided
+            if (request.getNewPassword() != null && !request.getNewPassword().trim().isEmpty()) {
+                // Validate new password using PasswordService requirements
+                if (!passwordService.isValidPassword(request.getNewPassword())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(createErrorResponse("New password " + passwordService.getPasswordRequirements()));
+                }
+                // Hash the new password
+                String hashedPassword = passwordService.hashPassword(request.getNewPassword());
+                existingUser.setPassword(hashedPassword);
+            }
+            
             User savedUser = userService.updateUser(id, existingUser);
             
             Map<String, Object> response = new HashMap<>();
@@ -546,7 +576,6 @@ public class AuthController {
             return ResponseEntity.ok(response);
             
         } catch (RuntimeException e) {
-            e.printStackTrace();
             
             // Check if it's a validation error
             if (e.getMessage() != null && e.getMessage().contains("Validation failed")) {
@@ -554,10 +583,22 @@ public class AuthController {
                     .body(createErrorResponse("Validation error: " + e.getMessage()));
             }
             
+            // Check if it's a unique constraint violation
+            if (e.getMessage() != null && (e.getMessage().contains("Duplicate entry") || e.getMessage().contains("unique constraint"))) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(createErrorResponse("Username or email already exists"));
+            }
+            
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(createErrorResponse("Failed to update staff member: " + e.getMessage()));
         } catch (Exception e) {
-            e.printStackTrace();
+            
+            // Check if it's a JSON deserialization error
+            if (e.getMessage() != null && (e.getMessage().contains("JSON") || e.getMessage().contains("deserialization") || e.getMessage().contains("parse"))) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(createErrorResponse("Invalid request format: " + e.getMessage()));
+            }
+            
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(createErrorResponse("Unexpected error occurred: " + e.getMessage()));
         }
@@ -683,6 +724,7 @@ public class AuthController {
         private String email;
         private String phoneNumber;
         private Boolean isActive;
+        private String newPassword;
 
         // Default constructor for Jackson
         public UpdateStaffRequest() {}
@@ -700,15 +742,19 @@ public class AuthController {
         public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
         public Boolean getIsActive() { return isActive; }
         public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+        public String getNewPassword() { return newPassword; }
+        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
         
         @Override
         public String toString() {
             return "UpdateStaffRequest{" +
                     "firstName='" + firstName + '\'' +
                     ", lastName='" + lastName + '\'' +
+                    ", username='" + username + '\'' +
                     ", email='" + email + '\'' +
                     ", phoneNumber='" + phoneNumber + '\'' +
                     ", isActive=" + isActive +
+                    ", newPassword=" + (newPassword != null ? "[PROVIDED]" : "null") +
                     '}';
         }
     }

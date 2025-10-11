@@ -776,7 +776,7 @@ export class CartService {
   }
 
   // Local cart management for demo purposes
-  private addItemToCartLocal(cartItem: CartItem): void {
+  addItemToCartLocal(cartItem: CartItem): void {
     const cart = this.getCurrentCart();
     if (!cart) return;
 
@@ -992,9 +992,9 @@ export class CartService {
 
 
   // Update item variant
-  updateItemVariant(productId: number, oldVariant: string, newVariant: string): void {
+  updateItemVariant(productId: number, oldVariant: string, newVariant: string): boolean {
     const cart = this.cartSubject.value;
-    if (!cart) return;
+    if (!cart) return false;
 
     // Find the item by productId and current variant
     const item = cart.items.find(i => 
@@ -1012,7 +1012,7 @@ export class CartService {
       if (existingNewVariant) {
         // Don't merge - just show a message that variant already exists
         this.notificationService.error(`Variant "${newVariant}" already exists in cart. Please remove the existing item first or add a different quantity.`);
-        return;
+        return false;
       }
       
       // No existing item with new variant, just update the current item
@@ -1047,6 +1047,10 @@ export class CartService {
         // For guest users, just bring item to top
         this.bringItemToTop(productId, newVariant);
       }
+      
+      return true; // Successfully updated variant
     }
+    
+    return false; // Item not found
   }
 }

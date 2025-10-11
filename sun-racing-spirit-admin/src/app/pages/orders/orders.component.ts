@@ -11,7 +11,6 @@ import { AdminOrderService } from '../../services/admin-order.service';
     <div class="page-container">
       <div class="page-header">
         <h1>Orders</h1>
-        <p>Manage customer orders and shipments</p>
       </div>
       <div class="page-content">
         <div class="tabs">
@@ -19,10 +18,24 @@ import { AdminOrderService } from '../../services/admin-order.service';
           <button class="tab" [class.active]="tab==='TO_SHIP'" (click)="setTab('TO_SHIP')">To Ship</button>
           <button class="tab" [class.active]="tab==='TO_RECEIVE'" (click)="setTab('TO_RECEIVE')">To Receive</button>
           <button class="tab" [class.active]="tab==='COMPLETED'" (click)="setTab('COMPLETED')">Completed</button>
+          <button class="tab" [class.active]="tab==='CANCELLED'" (click)="setTab('CANCELLED')">Cancelled</button>
         </div>
 
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Loading orders...</p>
+        </div>
+
+        <!-- Error State -->
+        <div *ngIf="errorMessage && !loading" class="error-container">
+          <div class="error-icon">⚠️</div>
+          <h3>Unable to Load Orders</h3>
+          <p>{{ errorMessage }}</p>
+          <button class="btn btn-primary" (click)="refresh()">Try Again</button>
+        </div>
         
-        <div class="orders-table-container">
+        <div *ngIf="!loading && !errorMessage" class="orders-table-container">
           <div class="table-header">
             <div class="table-info">
               <span class="order-count">{{ filtered.length }} orders</span>
@@ -37,7 +50,7 @@ import { AdminOrderService } from '../../services/admin-order.service';
                   <th class="customer">Customer</th>
                   <th class="total">Total</th>
                   <th class="status">Status</th>
-                  <th class="actions">Actions</th>
+                  <th class="actions">{{ tab === 'CANCELLED' ? 'Reason' : tab === 'ALL' ? 'Actions/Reasons' : 'Actions' }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -62,7 +75,6 @@ import { AdminOrderService } from '../../services/admin-order.service';
                   <td class="customer">
                     <div class="customer-info">
                       <div class="customer-name">{{ o.recipientName || 'N/A' }}</div>
-                      <div class="customer-phone">{{ o.recipientPhone || 'N/A' }}</div>
                     </div>
                   </td>
                   <td class="total">
@@ -72,12 +84,19 @@ import { AdminOrderService } from '../../services/admin-order.service';
                     <span class="status-badge" 
                           [class.placed]="o.status==='PENDING'" 
                           [class.out]="o.status==='SHIPPED'" 
-                          [class.delivered]="o.status==='DELIVERED'">
+                          [class.delivered]="o.status==='DELIVERED'"
+                          [class.cancelled]="o.status==='CANCELLED'">
                       {{ statusLabel(o.status) }}
                     </span>
                   </td>
                   <td class="actions">
-                    <div class="action-buttons">
+                    <!-- Cancellation Reason for CANCELLED orders -->
+                    <div *ngIf="o.status==='CANCELLED'" class="cancellation-reason">
+                      <span class="reason-text">{{ o.cancellationReason || 'No reason provided' }}</span>
+                    </div>
+                    
+                    <!-- Action Buttons for other orders -->
+                    <div *ngIf="o.status!=='CANCELLED'" class="action-buttons">
                       <button class="btn-action btn-ship" 
                               *ngIf="o.status==='PENDING'" 
                               (click)="openShipModal(o)" 
@@ -556,6 +575,81 @@ import { AdminOrderService } from '../../services/admin-order.service';
       margin: 0 auto;
     }
     
+    /* Loading and Error States */
+    .loading-container, .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      text-align: center;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 140, 0, 0.3);
+      border-radius: 50%;
+      border-top-color: #ff8c00;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-container p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1.1rem;
+    }
+    
+    .error-container {
+      background: rgba(239, 68, 68, 0.05);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 16px;
+      margin-bottom: 40px;
+    }
+    
+    .error-icon {
+      font-size: 3rem;
+      margin-bottom: 20px;
+    }
+    
+    .error-container h3 {
+      color: #ef4444;
+      margin-bottom: 12px;
+      font-size: 1.5rem;
+    }
+    
+    .error-container p {
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 24px;
+      max-width: 400px;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #ff8c00, #ffb347);
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
+    }
+    
     .page-header {
       margin-bottom: 40px;
     }
@@ -681,6 +775,7 @@ import { AdminOrderService } from '../../services/admin-order.service';
       gap: 8px;
     }
     
+    
     .order-item {
       display: flex;
       align-items: center;
@@ -725,10 +820,6 @@ import { AdminOrderService } from '../../services/admin-order.service';
       font-size: 0.9rem;
     }
     
-    .customer-phone {
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 0.8rem;
-    }
     
     .total-amount {
       color: white;
@@ -758,11 +849,33 @@ import { AdminOrderService } from '../../services/admin-order.service';
       color: #22c55e;
     }
     
+    .status-badge.cancelled {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+    
     .action-buttons {
       display: flex;
       gap: 8px;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
+    }
+    
+    .cancellation-reason {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 4px 8px;
+      min-height: 32px;
+    }
+    
+    .reason-text {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.875rem;
+      font-weight: 400;
+      text-align: left;
+      word-break: break-word;
+      max-width: 200px;
     }
     
     .btn-action {
@@ -1299,11 +1412,13 @@ import { AdminOrderService } from '../../services/admin-order.service';
 })
 export class OrdersComponent implements OnInit, OnDestroy {
   orders: any[] = [];
-  tab: 'ALL' | 'TO_SHIP' | 'TO_RECEIVE' | 'COMPLETED' = 'ALL';
+  tab: 'ALL' | 'TO_SHIP' | 'TO_RECEIVE' | 'COMPLETED' | 'CANCELLED' = 'ALL';
   placeholderImg = 'data:image/svg+xml;utf8,%3Csvg xmlns%3D"http%3A//www.w3.org/2000/svg" width%3D"60" height%3D"60"/%3E';
   private pollId: any;
   shipModal = false;
   deliveredModal = false;
+  loading = true;
+  errorMessage = '';
   completedModal = false;
   activeOrder: any = null;
   waybillFile?: File;
@@ -1346,26 +1461,33 @@ export class OrdersComponent implements OnInit, OnDestroy {
   }
 
   refresh() {
+    this.loading = true;
+    this.errorMessage = '';
+    
     this.ordersService.getAllOrders().subscribe({
       next: (list: any[]) => {
-        console.log('Admin orders loaded:', list); // Debug log
         this.orders = Array.isArray(list) ? list : [];
+        this.loading = false;
       },
       error: (error: any) => {
         console.error('Error loading orders:', error);
         this.orders = [];
+        this.errorMessage = 'Failed to load orders. Please try again.';
+        this.loading = false;
       }
     });
   }
 
-  setTab(t: 'ALL' | 'TO_SHIP' | 'TO_RECEIVE' | 'COMPLETED') { this.tab = t; this.refresh(); }
+  setTab(t: 'ALL' | 'TO_SHIP' | 'TO_RECEIVE' | 'COMPLETED' | 'CANCELLED') { this.tab = t; this.refresh(); }
 
   get filtered(): any[] {
     if (!Array.isArray(this.orders)) return [];
     if (this.tab === 'ALL') return this.orders;
     if (this.tab === 'TO_SHIP') return this.orders.filter(o => o.status === 'PENDING');
     if (this.tab === 'TO_RECEIVE') return this.orders.filter(o => o.status === 'SHIPPED');
-    return this.orders.filter(o => o.status === 'DELIVERED');
+    if (this.tab === 'COMPLETED') return this.orders.filter(o => o.status === 'DELIVERED');
+    if (this.tab === 'CANCELLED') return this.orders.filter(o => o.status === 'CANCELLED');
+    return this.orders;
   }
 
   // display helpers

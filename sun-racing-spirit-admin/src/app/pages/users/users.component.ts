@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -13,7 +13,6 @@ import { AdminAuthService, AdminUser, CreateStaffRequest, UpdateStaffRequest } f
       <div class="page-header">
         <div class="header-content">
           <h1>Staff Management</h1>
-          <p>Manage admin staff accounts and permissions</p>
         </div>
         <div class="header-actions">
           <button class="btn btn-primary" (click)="openCreateModal()" [disabled]="loading">
@@ -38,7 +37,7 @@ import { AdminAuthService, AdminUser, CreateStaffRequest, UpdateStaffRequest } f
         <div class="error-icon">⚠️</div>
         <h3>Unable to Load Staff Data</h3>
         <p>{{ error }}</p>
-        <button class="btn btn-primary" (click)="loadStaffMembers()">Try Again</button>
+        <button class="btn btn-primary" (click)="refreshStaffData()">Try Again</button>
       </div>
 
       <!-- Staff List -->
@@ -280,6 +279,44 @@ import { AdminAuthService, AdminUser, CreateStaffRequest, UpdateStaffRequest } f
                 <div *ngIf="passwordInput.invalid && passwordInput.touched" class="error-message">
                   <span *ngIf="passwordInput.errors?.['required']">Password is required</span>
                   <span *ngIf="passwordInput.errors?.['minlength']">Password must be at least 6 characters</span>
+                </div>
+              </div>
+
+
+              <div class="form-group" *ngIf="editingUser">
+                <label for="newPassword" class="form-label">New Password</label>
+                <div class="password-input-container">
+                  <input 
+                    [type]="showNewPassword ? 'text' : 'password'" 
+                    id="newPassword"
+                    name="newPassword"
+                    class="form-input" 
+                    [(ngModel)]="formData.newPassword"
+                    minlength="8"
+                    #newPasswordInput="ngModel"
+                    placeholder="Enter new password (leave blank to keep current)"
+                  >
+                  <button 
+                    type="button" 
+                    class="password-toggle-btn" 
+                    (click)="toggleNewPasswordVisibility()"
+                    title="{{ showNewPassword ? 'Hide password' : 'Show password' }}"
+                  >
+                    <svg *ngIf="!showNewPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg *ngIf="showNewPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                  </button>
+                </div>
+                <div *ngIf="newPasswordInput.invalid && newPasswordInput.touched" class="error-message">
+                  <span *ngIf="newPasswordInput.errors?.['minlength']">Password must be at least 8 characters</span>
+                </div>
+                <div class="form-help-text">
+                  Set a new password for the staff member. This will replace their existing password.
                 </div>
               </div>
 
@@ -1037,6 +1074,49 @@ import { AdminAuthService, AdminUser, CreateStaffRequest, UpdateStaffRequest } f
       margin-top: 4px;
     }
     
+    .form-help-text {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.8rem;
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    /* Password input container with eye icon */
+    .password-input-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+
+    .password-toggle-btn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-toggle-btn:hover {
+      color: #ff8c00;
+      background: rgba(255, 140, 0, 0.1);
+    }
+
+    .password-toggle-btn:focus {
+      outline: none;
+      color: #ff8c00;
+      background: rgba(255, 140, 0, 0.1);
+    }
+    
     .error-container {
       background: rgba(239, 68, 68, 0.1);
       border: 1px solid rgba(239, 68, 68, 0.3);
@@ -1074,7 +1154,7 @@ import { AdminAuthService, AdminUser, CreateStaffRequest, UpdateStaffRequest } f
     }
   `]
 })
-export class UsersComponent implements OnInit {
+export class UsersComponent implements OnInit, OnDestroy {
   staffMembers: AdminUser[] = [];
   loading = true;
   error = '';
@@ -1088,6 +1168,10 @@ export class UsersComponent implements OnInit {
   deletingUserId: number | null = null;
   formError = '';
   
+  // Polling management
+  private pollingInterval: any;
+  private readonly POLLING_INTERVAL = 2 * 60 * 1000; // 2 minutes instead of 30 seconds
+  
   // Form data
   formData: any = {
     firstName: '',
@@ -1096,20 +1180,64 @@ export class UsersComponent implements OnInit {
     email: '',
     phoneNumber: '',
     password: '',
+    newPassword: '',
     isActive: true
   };
 
+  // Password visibility states
+  showNewPassword = false;
+
   constructor(private authService: AdminAuthService) {}
 
+  // Password visibility toggle methods
+  toggleNewPasswordVisibility(): void {
+    this.showNewPassword = !this.showNewPassword;
+  }
+
   ngOnInit(): void {
-    this.loadStaffMembers();
+    // Validate session first
+    this.authService.validateSession().subscribe({
+      next: (isValid) => {
+        if (isValid) {
+          this.loadStaffMembers();
+          this.startPolling();
+        } else {
+          this.loading = false;
+          this.error = 'Session expired. Please log in again.';
+        }
+      },
+      error: () => {
+        this.loading = false;
+        this.error = 'Session validation failed. Please log in again.';
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
+  private startPolling(): void {
+    this.stopPolling(); // Clear any existing interval
     
-    // Refresh staff list every 30 seconds to update online status (only if page is visible)
-    setInterval(() => {
+    // Refresh staff list every 2 minutes to update online status (only if page is visible)
+    this.pollingInterval = setInterval(() => {
       if (!document.hidden) {
         this.loadStaffMembers();
       }
-    }, 30000);
+    }, this.POLLING_INTERVAL);
+  }
+
+  private stopPolling(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+  }
+
+  // Manual refresh method for the "Try Again" button
+  refreshStaffData(): void {
+    this.loadStaffMembers();
   }
 
   loadStaffMembers(): void {
@@ -1134,7 +1262,17 @@ export class UsersComponent implements OnInit {
         this.loading = false;
         console.error('Error loading staff:', error);
         
-        if (error.status === 403) {
+        if (error.status === 429) {
+          // Rate limiting - stop polling temporarily
+          this.stopPolling();
+          const retryAfter = error.error?.retryAfter || 300;
+          this.error = `Too many requests. Please wait ${Math.ceil(retryAfter / 60)} minutes before trying again.`;
+          
+          // Restart polling after rate limit expires
+          setTimeout(() => {
+            this.startPolling();
+          }, retryAfter * 1000);
+        } else if (error.status === 403) {
           this.error = 'Access denied. Super Admin privileges required.';
         } else if (error.status === 0) {
           this.error = 'Unable to connect to server. Please try again later.';
@@ -1154,8 +1292,10 @@ export class UsersComponent implements OnInit {
       email: '',
       phoneNumber: '',
       password: '',
+      newPassword: '',
       isActive: true
     };
+    this.showNewPassword = false;
     this.formError = '';
     this.showModal = true;
   }
@@ -1168,8 +1308,10 @@ export class UsersComponent implements OnInit {
       username: user.username, // Add username field
       email: user.email,
       phoneNumber: user.phoneNumber || '',
+      newPassword: '', // Initialize empty for new password change
       isActive: user.isActive
     };
+    this.showNewPassword = false;
     this.formError = '';
     this.showModal = true;
   }
@@ -1181,21 +1323,51 @@ export class UsersComponent implements OnInit {
     this.submitting = false;
   }
 
+  private isValidPassword(password: string): boolean {
+    if (!password || password.length < 8) {
+      return false;
+    }
+    // Check for at least one uppercase letter
+    const hasUpperCase = /[A-Z]/.test(password);
+    // Check for at least one special character
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    // Check for at least one lowercase letter
+    const hasLowerCase = /[a-z]/.test(password);
+    
+    return hasUpperCase && hasSpecialChar && hasLowerCase;
+  }
+
   onSubmit(): void {
     if (this.submitting) return;
 
     this.submitting = true;
     this.formError = '';
 
+    // Validate new password if provided for editing
+    if (this.editingUser && this.formData.newPassword && this.formData.newPassword.trim() !== '') {
+      if (!this.isValidPassword(this.formData.newPassword)) {
+        this.submitting = false;
+        this.formError = 'New password must contain: minimum 8 characters, at least 1 uppercase letter, and 1 special character';
+        return;
+      }
+    }
+
     if (this.editingUser) {
       // Update existing staff
       const updateData: UpdateStaffRequest = {
         firstName: this.formData.firstName,
         lastName: this.formData.lastName,
+        username: this.formData.username,
         email: this.formData.email,
         phoneNumber: this.formData.phoneNumber || undefined,
-        isActive: this.formData.isActive
+        isActive: this.formData.isActive,
+        newPassword: this.formData.newPassword || undefined
       };
+
+      console.log('=== FRONTEND UPDATE REQUEST ===');
+      console.log('User ID:', this.editingUser.id);
+      console.log('Update Data:', updateData);
+      console.log('Form Data:', this.formData);
 
       this.authService.updateStaff(this.editingUser.id, updateData).subscribe({
         next: (response) => {

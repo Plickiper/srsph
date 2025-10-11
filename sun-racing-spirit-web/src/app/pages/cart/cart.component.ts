@@ -263,13 +263,15 @@ export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
     if (productId == null) return;
     
     // Update the variant in the cart service
-    this.cartService.updateItemVariant(productId, item.size || item.compatibility || 'Universal', newVariant);
+    const success = this.cartService.updateItemVariant(productId, item.size || item.compatibility || 'Universal', newVariant);
     
     // Close the dropdown
     this.toggleVariantDropdown(item);
     
-    // Show success message
-    this.notificationService.success(`Variant updated to ${newVariant}`);
+    // Only show success message if the update was successful
+    if (success) {
+      this.notificationService.success(`Variant updated to ${newVariant}`);
+    }
   }
 
   getSelectedItems(): CartItem[] {

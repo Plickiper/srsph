@@ -17,28 +17,13 @@ import { BaseComponent } from '../../core/base-component';
       <div class="dashboard-header">
         <div class="header-content">
           <h1 class="dashboard-title">Dashboard</h1>
-          <p class="dashboard-subtitle">Welcome to Sun Racing Spirit Admin Panel</p>
-        </div>
-        <div class="header-actions">
-          <button class="btn btn-secondary" (click)="refreshData()" [disabled]="loading">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-            </svg>
-            {{ loading ? 'Refreshing...' : 'Refresh' }}
-          </button>
         </div>
       </div>
       
-      <!-- Loading State with Skeleton -->
+      <!-- Loading State -->
       <div *ngIf="loading" class="loading-container">
-        <div class="skeleton-grid">
-          <div class="skeleton-card" *ngFor="let i of [1,2,3,4]"></div>
-        </div>
-        <div class="skeleton-content">
-          <div class="skeleton-section"></div>
-          <div class="skeleton-section"></div>
-        </div>
+        <div class="loading-spinner"></div>
+        <p>Loading dashboard data...</p>
       </div>
       
       <!-- Error State -->
@@ -148,9 +133,6 @@ import { BaseComponent } from '../../core/base-component';
           <div class="card-header">
             <h3>Recent Orders</h3>
             <div class="card-header-actions">
-              <div class="auto-refresh-indicator" *ngIf="pollingSubscription">
-                <div class="refresh-dot"></div>
-              </div>
               <a routerLink="/orders" class="view-all-btn">View All</a>
             </div>
           </div>
@@ -179,7 +161,8 @@ import { BaseComponent } from '../../core/base-component';
                   <span class="status-badge" 
                         [class.placed]="order.status==='PENDING'" 
                         [class.out]="order.status==='SHIPPED'" 
-                        [class.delivered]="order.status==='DELIVERED'">
+                        [class.delivered]="order.status==='DELIVERED'"
+                        [class.cancelled]="order.status==='CANCELLED'">
                     {{ formatOrderStatus(order.status) }}
                   </span>
                   <div class="order-amount">₱{{ order.totalAmount | number:'1.0-0' }}</div>
@@ -254,10 +237,6 @@ import { BaseComponent } from '../../core/base-component';
       flex: 1;
     }
     
-    .header-actions {
-      display: flex;
-      gap: 12px;
-    }
     
     .dashboard-title {
       font-size: 2.5rem;
@@ -483,30 +462,6 @@ import { BaseComponent } from '../../core/base-component';
       gap: 16px;
     }
 
-    .auto-refresh-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 4px 8px;
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      border-radius: 6px;
-      font-size: 0.75rem;
-      color: #10b981;
-    }
-
-    .refresh-dot {
-      width: 6px;
-      height: 6px;
-      background: #10b981;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
 
 
     .filter-tabs {
@@ -740,6 +695,11 @@ import { BaseComponent } from '../../core/base-component';
       color: #22c55e;
     }
     
+    .status-badge.cancelled {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+    
     .order-amount {
       color: white;
       font-weight: 600;
@@ -886,48 +846,6 @@ import { BaseComponent } from '../../core/base-component';
       font-style: italic;
     }
 
-    /* Skeleton Loading Styles */
-    .skeleton-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
-      margin-bottom: 40px;
-    }
-
-    .skeleton-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 24px;
-      height: 120px;
-      animation: skeleton-pulse 1.5s ease-in-out infinite;
-    }
-
-    .skeleton-content {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 20px;
-    }
-
-    .skeleton-section {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 24px;
-      height: 400px;
-      animation: skeleton-pulse 1.5s ease-in-out infinite;
-    }
-
-    @keyframes skeleton-pulse {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
-    }
-
-    @media (max-width: 1200px) {
-      .skeleton-content {
-        grid-template-columns: 1fr;
-      }
-    }
   `]
 })
 export class DashboardComponent extends BaseComponent implements OnInit, OnDestroy {
@@ -937,7 +855,7 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
   topProductsFilter: 'sold' | 'rated' | 'category' = 'sold';
   private ratingsCache = new Map<number, number>();
   pollingSubscription: Subscription | null = null;
-  private readonly POLLING_INTERVAL = 30000; // 30 seconds
+  private readonly POLLING_INTERVAL = 15000; // 15 seconds for professional real-time updates
   placeholderImg = 'data:image/svg+xml;utf8,%3Csvg xmlns%3D"http%3A//www.w3.org/2000/svg" width%3D"60" height%3D"60"/%3E';
   
   constructor(
@@ -951,7 +869,8 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
   
   ngOnInit() {
     this.loadDashboardData();
-    this.startPolling();
+    // Start polling after initial data is loaded
+    setTimeout(() => this.startPolling(), 2000);
   }
 
   override ngOnDestroy() {
@@ -1136,19 +1055,48 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
   }
 
   private refreshRecentOrders() {
-    // Only refresh recent orders data, not the entire dashboard
+    // Silently refresh recent orders data in the background
     this.addSubscription(
       this.dashboardService.getRecentOrders().subscribe({
         next: (recentOrders) => {
           if (this.dashboardData) {
-            this.dashboardData.recentOrders = recentOrders;
+            // Check if the data actually changed to avoid unnecessary updates
+            const currentOrders = this.dashboardData.recentOrders || [];
+            const hasChanged = this.hasRecentOrdersChanged(currentOrders, recentOrders);
+            
+            if (hasChanged) {
+              this.dashboardData.recentOrders = recentOrders;
+              // Trigger change detection to update the UI
+              this.cd.detectChanges();
+            }
           }
         },
         error: (error) => {
           console.error('Error refreshing recent orders:', error);
-          // Don't show error to user for background refresh
+          // Silent error handling for background refresh
         }
       })
     );
+  }
+
+  private hasRecentOrdersChanged(current: any[], newOrders: any[]): boolean {
+    // Check if count changed
+    if (current.length !== newOrders.length) {
+      return true;
+    }
+    
+    // Check if any order status or details changed
+    for (let i = 0; i < current.length; i++) {
+      const currentOrder = current[i];
+      const newOrder = newOrders[i];
+      
+      if (currentOrder.id !== newOrder.id || 
+          currentOrder.status !== newOrder.status || 
+          currentOrder.totalAmount !== newOrder.totalAmount) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 }

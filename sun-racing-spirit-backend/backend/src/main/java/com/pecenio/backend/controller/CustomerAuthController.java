@@ -243,8 +243,6 @@ public class CustomerAuthController {
                 Object profilePictureObj = request.get("profilePicture");
                 String profilePicture = profilePictureObj != null ? profilePictureObj.toString().trim() : "";
                 
-                System.out.println("Backend - Received profilePicture: " + (profilePictureObj == null ? "null" : "not null"));
-                System.out.println("Backend - ProfilePicture value: '" + profilePicture + "'");
                 
                 // Validate base64 image data only if not empty
                 if (!profilePicture.isEmpty() && !profilePicture.startsWith("data:image/")) {
@@ -253,7 +251,6 @@ public class CustomerAuthController {
                     return ResponseEntity.badRequest().body(response);
                 }
                 user.setProfilePicture(profilePicture.isEmpty() ? null : profilePicture);
-                System.out.println("Backend - Set profilePicture to: " + (user.getProfilePicture() == null ? "null" : "not null"));
             }
             if (request.containsKey("address")) {
                 String address = request.get("address").toString().trim();
@@ -316,7 +313,6 @@ public class CustomerAuthController {
             userData.put("gender", updatedUser.getGender() != null ? updatedUser.getGender() : "");
             userData.put("dateOfBirth", updatedUser.getDateOfBirth() != null ? updatedUser.getDateOfBirth().toLocalDate().toString() : "");
             userData.put("profilePicture", updatedUser.getProfilePicture());
-            System.out.println("Backend - Returning profilePicture: " + (updatedUser.getProfilePicture() == null ? "null" : "not null"));
             userData.put("address", updatedUser.getAddress() != null ? updatedUser.getAddress() : "");
             userData.put("city", updatedUser.getCity() != null ? updatedUser.getCity() : "");
             userData.put("state", updatedUser.getState() != null ? updatedUser.getState() : "");

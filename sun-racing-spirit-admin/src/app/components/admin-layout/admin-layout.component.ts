@@ -4,7 +4,6 @@ import { RouterModule, Router } from '@angular/router';
 import { AdminNavComponent } from '../admin-nav/admin-nav.component';
 import { AdminAuthService } from '../../services/admin-auth.service';
 import { SessionService } from '../../services/session.service';
-import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-admin-layout',
@@ -28,13 +27,6 @@ import { Observable } from 'rxjs';
           </button>
         </div>
         
-        <!-- Session Status Indicator -->
-        <div *ngIf="showNavigation" class="session-status" [class.active]="isSessionActive$ | async">
-          <div class="status-indicator">
-            <div class="status-dot"></div>
-            <span class="status-text">Session Active</span>
-          </div>
-        </div>
         
         
         <router-outlet></router-outlet>
@@ -157,73 +149,18 @@ import { Observable } from 'rxjs';
       }
     }
 
-    /* Session Status Indicator */
-    .session-status {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
-      opacity: 0;
-      transform: translateY(-10px);
-      transition: all 0.3s ease;
-    }
-
-    .session-status.active {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .status-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      border-radius: 20px;
-      padding: 8px 16px;
-      backdrop-filter: blur(10px);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #10b981;
-      animation: pulse 2s infinite;
-    }
-
-    .status-text {
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: #10b981;
-    }
-
-    @keyframes pulse {
-      0% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-      }
-      70% {
-        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-      }
-      100% {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-      }
-    }
   `]
 })
 export class AdminLayoutComponent implements OnInit, OnDestroy {
   showNavigation = false;
   sidebarCollapsed = false;
   isMobile = false;
-  isSessionActive$: Observable<boolean>;
 
   constructor(
     private authService: AdminAuthService,
     private router: Router,
     private sessionService: SessionService
-  ) {
-    this.isSessionActive$ = this.sessionService.getActivityStatus();
-  }
+  ) {}
 
   ngOnInit(): void {
     // Check initial screen size
