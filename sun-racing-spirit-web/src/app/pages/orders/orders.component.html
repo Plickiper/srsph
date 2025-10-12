@@ -177,7 +177,6 @@
         </div>
         
         <div class="modal-actions">
-          <button class="cancel-btn" (click)="closeRatingModal()">Cancel</button>
           <button class="submit-btn" (click)="submitRating()" [disabled]="currentRating === 0">Submit Rating</button>
         </div>
       </div>
@@ -220,6 +219,10 @@
             id="cancellation-reason" 
             [(ngModel)]="selectedCancellationReason" 
             class="reason-select"
+            (focus)="onDropdownFocus($event)" 
+            (blur)="onDropdownBlur($event)" 
+            (change)="onDropdownChange($event)" 
+            (mousedown)="onDropdownMouseDown($event)"
             required
           >
             <option value="">Select a reason...</option>

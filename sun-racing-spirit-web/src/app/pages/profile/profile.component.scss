@@ -248,6 +248,42 @@
   }
 }
 
+// Section label styling (like form labels but with emphasis)
+.section-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ff8c00;
+  margin-bottom: 8px;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// Change password button styling
+.btn-change-password {
+  background: linear-gradient(135deg, #ff8c00, #ff6b35);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  
+  &:hover {
+    background: linear-gradient(135deg, #e67e00, #e55a2b);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
 .age-status {
   display: flex;
   align-items: center;
@@ -610,5 +646,86 @@ label {
 
   .profile-header h1 {
     font-size: 2rem;
+  }
+  
+  
+  .btn-change-password {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+// Password Modal Styles
+.password-modal {
+  max-width: 500px;
+  width: 90%;
+  
+  .modal-body {
+    padding: 30px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #e0e0e0;
+    }
+  }
+  
+  .password-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    
+    .form-input {
+      padding-right: 45px;
+      width: 100%;
+      
+      &.error {
+        border-color: #ff6b6b;
+        box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
+      }
+    }
+    
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #aaa;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color 0.2s ease;
+      
+      &:hover {
+        color: #ff8c00;
+      }
+      
+      svg {
+        display: block;
+      }
+    }
+  }
+  
+  .error-message {
+    color: #ff6b6b;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #333;
   }
 }

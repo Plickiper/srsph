@@ -40,6 +40,7 @@ export class OrdersComponent implements OnInit {
   cancellationReasons: any[] = [];
   selectedCancellationReason = '';
   customCancellationReason = '';
+  isDropdownOpen = false;
   
   // Shared selected order for both rating and cancellation modals
   selectedOrder: any = null;
@@ -389,6 +390,39 @@ export class OrdersComponent implements OnInit {
     this.selectedOrder = null;
     this.selectedCancellationReason = '';
     this.customCancellationReason = '';
+    this.isDropdownOpen = false;
+  }
+
+  // Dropdown event handlers for arrow rotation
+  onDropdownFocus(event: Event): void {
+    this.isDropdownOpen = true;
+  }
+
+  onDropdownBlur(event: Event): void {
+    this.isDropdownOpen = false;
+  }
+
+  onDropdownChange(event: Event): void {
+    // When a value is selected, close the dropdown and blur the element
+    const target = event.target as HTMLSelectElement;
+    this.isDropdownOpen = false;
+    
+    // Use setTimeout to ensure the blur happens after the selection is processed
+    setTimeout(() => {
+      target.blur();
+    }, 0);
+  }
+
+  onDropdownMouseDown(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    
+    // If dropdown is already open (focused), prevent the default behavior and close it
+    if (document.activeElement === target) {
+      event.preventDefault();
+      target.blur();
+      this.isDropdownOpen = false;
+    }
+    // If dropdown is closed, let the browser handle opening it naturally
   }
 
   loadCancellationReasons(): void {

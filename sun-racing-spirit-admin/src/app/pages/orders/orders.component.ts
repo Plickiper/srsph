@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { AdminOrderService } from '../../services/admin-order.service';
@@ -11,6 +11,10 @@ import { AdminOrderService } from '../../services/admin-order.service';
     <div class="page-container">
       <div class="page-header">
         <h1>Orders</h1>
+        <button class="btn btn-secondary refresh-btn" (click)="refresh()" [disabled]="loading">
+          <span class="refresh-icon">🔄</span>
+          Refresh
+        </button>
       </div>
       <div class="page-content">
         <div class="tabs">
@@ -652,6 +656,9 @@ import { AdminOrderService } from '../../services/admin-order.service';
     
     .page-header {
       margin-bottom: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     
     .page-header h1 {
@@ -663,6 +670,39 @@ import { AdminOrderService } from '../../services/admin-order.service';
     .page-header p {
       color: rgba(255, 255, 255, 0.7);
       margin: 0;
+    }
+    
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+    }
+    
+    .refresh-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    
+    .refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .refresh-icon {
+      font-size: 1rem;
+      transition: transform 0.3s ease;
+    }
+    
+    .refresh-btn:hover:not(:disabled) .refresh-icon {
+      transform: rotate(180deg);
     }
     
     .page-content {
@@ -1415,6 +1455,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   tab: 'ALL' | 'TO_SHIP' | 'TO_RECEIVE' | 'COMPLETED' | 'CANCELLED' = 'ALL';
   placeholderImg = 'data:image/svg+xml;utf8,%3Csvg xmlns%3D"http%3A//www.w3.org/2000/svg" width%3D"60" height%3D"60"/%3E';
   private pollId: any;
+  private isPageVisible = true;
   shipModal = false;
   deliveredModal = false;
   loading = true;
@@ -1441,11 +1482,39 @@ export class OrdersComponent implements OnInit, OnDestroy {
     });
     
     this.refresh();
-    // Lightweight polling so admin updates without manual refresh
-    this.pollId = setInterval(() => this.refresh(), 5000);
+    // Smart polling - only poll when page is visible and every 2 minutes
+    this.startSmartPolling();
   }
 
   ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    this.isPageVisible = !document.hidden;
+    if (this.isPageVisible) {
+      // Page became visible, refresh data and restart polling
+      this.refresh();
+      this.startSmartPolling();
+    } else {
+      // Page became hidden, stop polling to save resources
+      this.stopPolling();
+    }
+  }
+
+  private startSmartPolling(): void {
+    this.stopPolling(); // Clear any existing interval
+    if (this.isPageVisible) {
+      this.pollId = setInterval(() => {
+        if (this.isPageVisible) {
+          this.refresh();
+        }
+      }, 120000); // 2 minutes
+    }
+  }
+
+  private stopPolling(): void {
     if (this.pollId) {
       clearInterval(this.pollId);
       this.pollId = null;

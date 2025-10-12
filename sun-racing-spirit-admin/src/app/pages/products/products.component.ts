@@ -102,7 +102,8 @@ import { AdminProductService, Product } from '../../services/admin-product.servi
           </div>
         </div>
 
-        <div class="table-wrapper">
+        <!-- Desktop Table View -->
+        <div class="table-wrapper desktop-view">
           <table class="products-table">
             <thead>
               <tr>
@@ -167,6 +168,68 @@ import { AdminProductService, Product } from '../../services/admin-product.servi
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="mobile-view">
+          <div class="products-grid">
+            <div *ngFor="let product of filteredProducts" class="product-card">
+              <div class="card-header">
+                <div class="product-image">
+                  <img *ngIf="product.imageUrl" [src]="product.imageUrl" [alt]="product.name" class="product-img" (error)="onImageError($event, product)" (load)="onImageLoad($event, product)">
+                  <div *ngIf="!product.imageUrl" class="product-img-placeholder">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                      <polyline points="21,15 16,10 5,21"></polyline>
+                    </svg>
+                  </div>
+                </div>
+                <div class="product-info">
+                  <h3 class="product-name">{{ product.name }}</h3>
+                  <p class="product-brand">{{ product.brand }}</p>
+                  <div class="product-meta">
+                    <span class="category-badge">{{ product.category }}</span>
+                  </div>
+                  <div class="sku-section">
+                    <span class="sku-label">SKU:</span>
+                    <span class="sku-text">{{ product.partNumber }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card-body">
+                <div class="status-row">
+                  <div class="status-item">
+                    <span class="status-label">Status:</span>
+                    <span class="status-badge" 
+                          [class.published]="product.isPublished" 
+                          [class.unpublished]="!product.isPublished">
+                      {{ product.isPublished ? 'Published' : 'Unpublished' }}
+                    </span>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">Featured:</span>
+                    <span class="status-badge" 
+                          [class.featured]="product.isFeatured" 
+                          [class.not-featured]="!product.isFeatured">
+                      {{ product.isFeatured ? 'Yes' : 'No' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card-actions">
+                <button class="btn btn-primary btn-sm" (click)="editProduct(product)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                  Edit
+                </button>
+              </div>
+            </div>
+          </div>
           
           <div *ngIf="filteredProducts.length === 0" class="empty-state">
             <div class="empty-icon">
@@ -1666,6 +1729,343 @@ import { AdminProductService, Product } from '../../services/admin-product.servi
       .products-table th.category,
       .products-table td.category {
         display: none;
+      }
+    }
+
+    /* Mobile Card Layout Styles */
+    .mobile-view {
+      display: none;
+    }
+
+    .desktop-view {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .desktop-view {
+        display: none;
+      }
+
+      .mobile-view {
+        display: block;
+      }
+
+      .products-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 0;
+      }
+
+      .product-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .product-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .card-header .product-image {
+        width: 60px;
+        height: 60px;
+        flex-shrink: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #111;
+        border: 1px solid #222;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .card-header .product-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .card-header .product-img-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .card-header .product-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .card-header .product-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: white;
+        margin: 0 0 4px 0;
+        line-height: 1.3;
+        word-break: break-word;
+      }
+
+      .card-header .product-brand {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin: 0 0 8px 0;
+      }
+
+      .card-header .product-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .card-header .category-badge {
+        background: rgba(255, 140, 0, 0.2);
+        color: #ff8c00;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        width: fit-content;
+      }
+
+      .card-header .sku-section {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .card-header .sku-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .card-header .sku-text {
+        color: #ff8c00;
+        font-size: 0.85rem;
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+
+      .card-body {
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .status-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .status-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 0;
+      }
+
+      .status-label {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+
+      .status-badge {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-badge.published {
+        background: rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+      }
+
+      .status-badge.unpublished {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+      }
+
+      .status-badge.featured {
+        background: rgba(255, 140, 0, 0.2);
+        color: #ff8c00;
+      }
+
+      .status-badge.not-featured {
+        background: rgba(107, 114, 128, 0.2);
+        color: #6b7280;
+      }
+
+      .card-actions {
+        padding: 16px;
+        display: flex;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.02);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .card-actions .btn {
+        padding: 12px 24px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px; /* Touch-friendly height */
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        min-width: 120px;
+      }
+
+      .card-actions .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        border: none;
+      }
+
+      .card-actions .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      }
+
+      /* Mobile-specific improvements */
+      .page-header {
+        padding: 16px 0;
+      }
+
+      .header-content h1 {
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+      }
+
+      .filters-section {
+        margin-bottom: 20px;
+      }
+
+      .search-bar {
+        margin-bottom: 12px;
+      }
+
+      .search-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px 16px;
+      }
+
+      .filter-select {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px 16px;
+      }
+
+      .table-header {
+        padding: 16px;
+        margin-bottom: 0;
+      }
+
+      .table-actions {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .table-actions .btn {
+        width: 100%;
+        justify-content: center;
+        min-height: 44px;
+      }
+
+      /* Empty state for mobile */
+      .mobile-view .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        margin-top: 20px;
+      }
+
+      .mobile-view .empty-icon {
+        margin-bottom: 16px;
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .mobile-view .empty-state h3 {
+        color: white;
+        font-size: 1.25rem;
+        margin-bottom: 8px;
+      }
+
+      .mobile-view .empty-state p {
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 20px;
+      }
+
+      .mobile-view .empty-state .btn {
+        min-height: 44px;
+        padding: 12px 24px;
+      }
+    }
+
+    /* Extra small screens */
+    @media (max-width: 480px) {
+      .page-container {
+        padding: 12px;
+      }
+
+      .card-header {
+        padding: 12px;
+      }
+
+      .card-header .product-image {
+        width: 50px;
+        height: 50px;
+      }
+
+      .card-header .product-name {
+        font-size: 0.9rem;
+      }
+
+      .card-body {
+        padding: 10px 12px;
+      }
+
+      .card-actions {
+        padding: 12px;
+        flex-direction: column;
+      }
+
+      .card-actions .btn {
+        min-height: 48px;
+        font-size: 0.9rem;
       }
     }
   `]

@@ -39,3 +39,5 @@ export class ActivityTrackerService {
     this.authService.resetInactivityTimer();
   }
 }
+
+

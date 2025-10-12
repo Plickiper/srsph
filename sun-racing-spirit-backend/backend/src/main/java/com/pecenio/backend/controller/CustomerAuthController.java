@@ -298,6 +298,37 @@ public class CustomerAuthController {
                 user.setCountry(country);
             }
             
+            // Handle password change if provided
+            if (request.containsKey("currentPassword") && request.containsKey("newPassword")) {
+                String currentPassword = request.get("currentPassword").toString();
+                String newPassword = request.get("newPassword").toString();
+                
+                // Verify current password
+                if (!passwordService.matches(currentPassword, user.getPassword())) {
+                    response.put("success", false);
+                    response.put("message", "Current password is incorrect");
+                    return ResponseEntity.badRequest().body(response);
+                }
+                
+                // Check if new password is different from current password
+                if (passwordService.matches(newPassword, user.getPassword())) {
+                    response.put("success", false);
+                    response.put("message", "New password must be different from current password");
+                    return ResponseEntity.badRequest().body(response);
+                }
+                
+                // Validate new password
+                if (!passwordService.isValidPassword(newPassword)) {
+                    response.put("success", false);
+                    response.put("message", "New password " + passwordService.getPasswordRequirements());
+                    return ResponseEntity.badRequest().body(response);
+                }
+                
+                // Hash and set new password
+                String hashedPassword = passwordService.hashPassword(newPassword);
+                user.setPassword(hashedPassword);
+            }
+            
             // Update user
             User updatedUser = userService.updateUser(userId, user);
             

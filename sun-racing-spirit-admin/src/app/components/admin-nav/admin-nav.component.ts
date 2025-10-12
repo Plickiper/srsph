@@ -146,7 +146,8 @@ import { AdminAuthService, AdminUser, AdminPermissions } from '../../services/ad
         transform: translateX(-100%);
       }
       
-      .admin-nav:not(.mobile-hidden) {
+      /* Only show sidebar on mobile when it's explicitly opened (not collapsed and not mobile-hidden) */
+      .admin-nav:not(.collapsed):not(.mobile-hidden) {
         transform: translateX(0);
       }
       

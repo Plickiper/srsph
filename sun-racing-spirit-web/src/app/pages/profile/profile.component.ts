@@ -25,6 +25,13 @@ export class ProfileComponent extends BaseComponent implements OnInit, OnDestroy
   originalFormValue: any = null;
   isDropdownOpen = false;
   showProfileOverlay = false;
+  
+  // Password change modal state
+  showPasswordModal = false;
+  passwordForm: FormGroup;
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showRepeatPassword = false;
 
   constructor(
     private fb: FormBuilder,
@@ -50,6 +57,13 @@ export class ProfileComponent extends BaseComponent implements OnInit, OnDestroy
       postalCode: [''],
       country: ['']
     });
+
+    // Initialize password form
+    this.passwordForm = this.fb.group({
+      currentPassword: ['', [Validators.required]],
+      newPassword: ['', [Validators.required, Validators.minLength(8), this.passwordValidator, this.differentPasswordValidator.bind(this)]],
+      repeatPassword: ['', [Validators.required]]
+    }, { validators: this.passwordMatchValidator });
 
     // Track form changes
     this.addSubscription(
@@ -356,5 +370,143 @@ export class ProfileComponent extends BaseComponent implements OnInit, OnDestroy
       this.currentUser.gender &&
       this.currentUser.dateOfBirth
     );
+  }
+
+  // Password validation methods
+  passwordValidator(control: any) {
+    const value = control.value;
+    if (!value) return null;
+    
+    const hasUpperCase = /[A-Z]/.test(value);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(value);
+    const hasMinLength = value.length >= 8;
+    
+    if (!hasMinLength || !hasUpperCase || !hasSpecialChar) {
+      return { passwordRequirements: true };
+    }
+    return null;
+  }
+
+  passwordMatchValidator(group: FormGroup) {
+    const newPassword = group.get('newPassword')?.value;
+    const repeatPassword = group.get('repeatPassword')?.value;
+    
+    if (newPassword && repeatPassword && newPassword !== repeatPassword) {
+      return { passwordMismatch: true };
+    }
+    return null;
+  }
+
+  // Custom validator to check if new password is different from current password
+  differentPasswordValidator(control: any) {
+    const newPassword = control.value;
+    const currentPassword = this.passwordForm?.get('currentPassword')?.value;
+    
+    if (newPassword && currentPassword && newPassword === currentPassword) {
+      return { samePassword: true };
+    }
+    return null;
+  }
+
+  // Method to validate current password (will be called on blur)
+  validateCurrentPassword(): void {
+    // Clear any previous errors
+    this.passwordForm.get('currentPassword')?.setErrors(null);
+  }
+
+  // Password change modal methods
+  openPasswordModal(): void {
+    this.showPasswordModal = true;
+    this.passwordForm.reset();
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showRepeatPassword = false;
+    
+    // Add listener to re-validate new password when current password changes
+    const currentPasswordSubscription = this.passwordForm.get('currentPassword')?.valueChanges.subscribe(() => {
+      this.passwordForm.get('newPassword')?.updateValueAndValidity();
+    });
+    
+    if (currentPasswordSubscription) {
+      this.addSubscription(currentPasswordSubscription);
+    }
+  }
+
+  closePasswordModal(): void {
+    this.showPasswordModal = false;
+    this.passwordForm.reset();
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showRepeatPassword = false;
+  }
+
+  toggleCurrentPasswordVisibility(): void {
+    this.showCurrentPassword = !this.showCurrentPassword;
+  }
+
+  toggleNewPasswordVisibility(): void {
+    this.showNewPassword = !this.showNewPassword;
+  }
+
+  toggleRepeatPasswordVisibility(): void {
+    this.showRepeatPassword = !this.showRepeatPassword;
+  }
+
+  changePassword(): void {
+    if (this.passwordForm.valid && this.currentUser) {
+      const formValue = this.passwordForm.value;
+      
+      const updateData = {
+        userId: this.currentUser.id,
+        currentPassword: formValue.currentPassword,
+        newPassword: formValue.newPassword
+      };
+
+      this.http.put('http://localhost:8080/api/customer/auth/profile', updateData).subscribe({
+        next: (response: any) => {
+          if (response.success) {
+            this.closePasswordModal();
+            
+            // Logout user and redirect to login immediately
+            this.authService.logout();
+            this.router.navigate(['/login']);
+          } else {
+            // Handle specific error messages
+            if (response.message && response.message.includes('Current password is incorrect')) {
+              this.passwordForm.get('currentPassword')?.setErrors({ incorrectPassword: true });
+              this.notificationService.error('Current password is incorrect');
+            } else if (response.message && response.message.includes('New password must be different')) {
+              this.passwordForm.get('newPassword')?.setErrors({ samePassword: true });
+              this.notificationService.error('New password must be different from current password');
+            } else {
+              this.notificationService.error(response.message || 'Failed to change password');
+            }
+          }
+        },
+        error: (error) => {
+          // Handle HTTP errors
+          if (error.status === 400 && error.error && error.error.message) {
+            if (error.error.message.includes('Current password is incorrect')) {
+              this.passwordForm.get('currentPassword')?.setErrors({ incorrectPassword: true });
+              this.notificationService.error('Current password is incorrect');
+            } else if (error.error.message.includes('New password must be different')) {
+              this.passwordForm.get('newPassword')?.setErrors({ samePassword: true });
+              this.notificationService.error('New password must be different from current password');
+            } else {
+              this.notificationService.error(error.error.message);
+            }
+          } else {
+            this.notificationService.error('Failed to change password. Please try again.');
+            console.error('Password change error:', error);
+          }
+        }
+      });
+    } else {
+      this.notificationService.error('Please fill in all fields correctly.');
+    }
+  }
+
+  getPasswordRequirements(): string {
+    return 'Password must be at least 8 characters long, contain at least one uppercase letter, and one special character.';
   }
 }

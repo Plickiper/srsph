@@ -35,17 +35,6 @@ import { ProductListComponent } from '../../components/product-list/product-list
               </a>
             </div>
           </div>
-          <div class="hero-image">
-            <div class="hero-image-container">
-              <div class="hero-placeholder">
-                <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-                <h3>Premium Parts</h3>
-                <p>High-quality aftermarket components</p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -154,9 +143,8 @@ import { ProductListComponent } from '../../components/product-list/product-list
     }
 
     .hero-content {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 60px;
+      display: flex;
+      justify-content: center;
       align-items: center;
       max-width: 1200px;
       margin: 0 auto;
@@ -164,8 +152,9 @@ import { ProductListComponent } from '../../components/product-list/product-list
     }
 
     .hero-text {
-      max-width: none;
+      max-width: 800px;
       width: 100%;
+      text-align: center;
     }
 
     .hero-title {
@@ -194,6 +183,7 @@ import { ProductListComponent } from '../../components/product-list/product-list
 
     .hero-actions {
       display: flex;
+      justify-content: center;
       gap: var(--spacing-lg);
       flex-wrap: wrap;
     }
@@ -217,56 +207,6 @@ import { ProductListComponent } from '../../components/product-list/product-list
       box-shadow: 0 12px 35px rgba(255, 140, 0, 0.6);
     }
 
-    .hero-image-container {
-      position: relative;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .hero-placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 400px;
-      background: linear-gradient(135deg, rgba(255, 140, 0, 0.1), rgba(255, 193, 7, 0.1));
-      border: 2px dashed rgba(255, 140, 0, 0.3);
-      border-radius: 16px;
-      color: var(--sun-orange-yellow);
-      text-align: center;
-      
-      svg {
-        margin-bottom: 16px;
-        opacity: 0.8;
-      }
-      
-      h3 {
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: var(--white);
-      }
-      
-      p {
-        font-size: 1rem;
-        opacity: 0.8;
-        color: var(--gray-300);
-      }
-    }
-
-    .hero-img {
-      width: 100%;
-      height: 400px;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-
-    .hero-image-container:hover .hero-img {
-      transform: scale(1.02);
-    }
 
     .section-title {
       text-align: center;
@@ -387,9 +327,6 @@ import { ProductListComponent } from '../../components/product-list/product-list
     /* Responsive Design */
     @media (max-width: 1024px) {
       .hero-content {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-2xl);
-        text-align: center;
         padding: 0 var(--spacing-md);
       }
 

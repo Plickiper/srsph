@@ -163,8 +163,13 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Check initial screen size
+    // Check initial screen size and set sidebar state accordingly
     this.checkScreenSize();
+    
+    // If starting in mobile view, collapse the sidebar by default
+    if (this.isMobile) {
+      this.sidebarCollapsed = true;
+    }
     
     // Listen to window resize events
     window.addEventListener('resize', () => this.checkScreenSize());
@@ -181,7 +186,14 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
   }
 
   private checkScreenSize(): void {
+    const wasMobile = this.isMobile;
     this.isMobile = window.innerWidth <= 1024;
+    
+    // If switching to mobile, collapse the sidebar
+    // If switching from mobile to desktop, keep current state
+    if (this.isMobile && !wasMobile) {
+      this.sidebarCollapsed = true;
+    }
   }
 
   toggleSidebar(): void {

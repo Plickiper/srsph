@@ -855,7 +855,7 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
   topProductsFilter: 'sold' | 'rated' | 'category' = 'sold';
   private ratingsCache = new Map<number, number>();
   pollingSubscription: Subscription | null = null;
-  private readonly POLLING_INTERVAL = 15000; // 15 seconds for professional real-time updates
+  private readonly POLLING_INTERVAL = 300000; // 5 minutes instead of 15 seconds to reduce server load
   placeholderImg = 'data:image/svg+xml;utf8,%3Csvg xmlns%3D"http%3A//www.w3.org/2000/svg" width%3D"60" height%3D"60"/%3E';
   
   constructor(
