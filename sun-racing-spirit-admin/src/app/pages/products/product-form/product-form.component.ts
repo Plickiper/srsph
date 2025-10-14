@@ -23,7 +23,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     category: '',
     partNumber: '',
     compatibility: '',
-    price: 0,
+    price: 1, // Set minimum valid price to avoid validation errors
     stockQuantity: 0,
     description: '',
     imageUrl: '',
@@ -44,6 +44,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   uploading = false;
   uploadProgress = 0;
   filePreviewUrls = new Map<File, string>();
+  previewImageUrl: string = ''; // For preview only, not sent to backend
   
   // Compatibility multi-select properties
   isCompatibilityOpen = false;
@@ -172,6 +173,35 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   async onSubmit(): Promise<void> {
     if (this.submitting) return;
 
+    // Validate required fields
+    if (!this.product.name?.trim()) {
+      this.errorMessage = 'Product name is required';
+      return;
+    }
+
+    if (!this.product.category?.trim()) {
+      this.errorMessage = 'Product category is required';
+      return;
+    }
+
+    if (!this.product.partNumber?.trim()) {
+      this.errorMessage = 'Product part number is required';
+      return;
+    }
+
+    if (!this.useVariantPricing && this.product.price <= 0) {
+      this.errorMessage = 'Price must be greater than 0';
+      return;
+    }
+
+    if (this.useVariantPricing && this.productVariants.length > 0) {
+      const invalidVariant = this.productVariants.find(v => v.price <= 0);
+      if (invalidVariant) {
+        this.errorMessage = `Price for variant "${invalidVariant.model}" must be greater than 0`;
+        return;
+      }
+    }
+
     const action = this.isEditMode ? 'update' : 'create';
     const productName = this.product.name || 'this product';
     
@@ -232,9 +262,20 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       }
 
       this.router.navigate(['/products']);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving product:', error);
-      this.errorMessage = 'Failed to save product';
+      
+      // Handle validation errors
+      if (error.status === 400 && error.error && error.error.fieldErrors) {
+        const fieldErrors = error.error.fieldErrors;
+        const errorMessages = Object.values(fieldErrors).join(', ');
+        this.errorMessage = `Validation failed: ${errorMessages}`;
+      } else if (error.status === 400 && error.error && error.error.error) {
+        this.errorMessage = error.error.error;
+      } else {
+        this.errorMessage = 'Failed to save product';
+      }
+      
       this.submitting = false;
     }
   }
@@ -291,9 +332,14 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.uploading = true;
-    this.uploadProgress = 0;
-
+    // Clear any existing preview and product imageUrl
+    this.previewImageUrl = '';
+    this.product.imageUrl = '';
+    
+    // Store the file for upload during form submission
+    this.selectedFiles = [file];
+    
+    // Convert to base64 for preview only
     this.convertMainImageToBase64(file);
   }
 
@@ -321,7 +367,8 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     }
 
     this.selectedAdditionalFiles = [...this.selectedAdditionalFiles, ...validFiles];
-    this.processAdditionalImages();
+    // Note: processAdditionalImagesAsync will be called during form submission
+    // We don't call it here to avoid immediate upload
   }
 
   isValidImageFile(file: File): boolean {
@@ -332,7 +379,9 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64String = e.target?.result as string;
-      this.product.imageUrl = base64String;
+      // Store base64 for preview only - don't set product.imageUrl yet
+      // The actual imageUrl will be set after upload in processMainImageAsync
+      this.previewImageUrl = base64String;
       this.uploading = false;
       this.uploadProgress = 0;
     };
@@ -344,42 +393,38 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     reader.readAsDataURL(file);
   }
 
-  processAdditionalImages(): void {
-    if (this.selectedAdditionalFiles.length === 0) return;
-
-    this.selectedAdditionalFiles.forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64String = e.target?.result as string;
-        if (base64String) {
-          if (!this.product.images) {
-            this.product.images = [];
-          }
-          this.product.images.push(base64String);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
-    this.selectedAdditionalFiles = [];
-  }
 
   async processMainImageAsync(): Promise<void> {
     if (this.selectedFiles.length === 0) return;
 
     const file = this.selectedFiles[0];
-    return new Promise<void>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64String = e.target?.result as string;
-        this.product.imageUrl = base64String;
-        resolve();
-      };
-      reader.onerror = (error) => {
-        reject(error);
-      };
-      reader.readAsDataURL(file);
-    });
+    
+    try {
+      this.uploading = true;
+      this.uploadProgress = 0;
+      
+      // Upload the image to the backend
+      const response = await this.productService.uploadProductImage(file).toPromise();
+      
+      if (response && response.success) {
+        // Set the actual image URL from the backend with full URL
+        const backendBaseUrl = 'http://localhost:8080';
+        this.product.imageUrl = response.imageUrl.startsWith('http') 
+          ? response.imageUrl 
+          : `${backendBaseUrl}${response.imageUrl}`;
+        // Clear preview since we now have the real URL
+        this.previewImageUrl = '';
+      } else {
+        throw new Error('Image upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      this.errorMessage = 'Failed to upload image';
+      throw error;
+    } finally {
+      this.uploading = false;
+      this.uploadProgress = 0;
+    }
   }
 
   async processAdditionalImagesAsync(): Promise<void> {
@@ -392,22 +437,27 @@ export class ProductFormComponent implements OnInit, OnDestroy {
         this.product.images = [];
       }
 
-      const promises = this.selectedAdditionalFiles.map((file, index) => {
-        return this.convertFileToBase64Promise(file);
+      // Upload each additional image to the backend
+      const uploadPromises = this.selectedAdditionalFiles.map(async (file) => {
+        const response = await this.productService.uploadProductImage(file).toPromise();
+        if (response && response.success) {
+          // Ensure full URL for additional images too
+          const backendBaseUrl = 'http://localhost:8080';
+          return response.imageUrl.startsWith('http') 
+            ? response.imageUrl 
+            : `${backendBaseUrl}${response.imageUrl}`;
+        } else {
+          throw new Error('Failed to upload image');
+        }
       });
 
-      const base64Images = await Promise.all(promises);
-      
-      if (!this.product.images) {
-        this.product.images = [];
-      }
-      
-      this.product.images.push(...base64Images);
+      const uploadedImageUrls = await Promise.all(uploadPromises);
+      this.product.images.push(...uploadedImageUrls);
       
       this.selectedAdditionalFiles = [];
     } catch (error) {
       console.error('Error processing additional images:', error);
-      this.errorMessage = 'Failed to process additional images';
+      this.errorMessage = 'Failed to upload additional images';
       this.selectedAdditionalFiles = [];
     }
   }

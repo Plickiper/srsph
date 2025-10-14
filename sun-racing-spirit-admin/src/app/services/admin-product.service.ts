@@ -70,7 +70,7 @@ export class AdminProductService {
 
   private getAuthHeaders(): HttpHeaders {
     // Get user from localStorage or session
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
     return new HttpHeaders({
       'Content-Type': 'application/json',
       'Admin-Role': user.role || 'SUPER_ADMIN'
@@ -214,6 +214,21 @@ export class AdminProductService {
       );
   }
 
+  // Upload product image
+  uploadProductImage(file: File): Observable<{success: boolean, imageUrl: string, message: string}> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Create headers specifically for file upload - don't include Content-Type
+    const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const headers = new HttpHeaders({
+      'Admin-Role': user.role || 'SUPER_ADMIN'
+      // Don't set Content-Type - let browser set it with boundary for multipart
+    });
+    
+    return this.http.post<{success: boolean, imageUrl: string, message: string}>(`${this.apiUrl}/upload-image`, formData, { headers });
+  }
+
   private parseProductImages(product: Product): Product {
     // Parse images JSON string to array
     if (product.images && typeof product.images === 'string') {
@@ -225,6 +240,31 @@ export class AdminProductService {
       }
     } else if (!product.images) {
       product.images = [];
+    }
+
+    // Fix image URLs to include backend base URL
+    if (product.imageUrl && product.imageUrl.trim() !== '') {
+      // Check if it's a base64 string (from before our fixes)
+      if (product.imageUrl.startsWith('data:image/')) {
+        // Keep base64 for now, but this should be replaced with uploaded image
+        // For now, we'll leave it as is since it's too long for backend validation
+      } else if (!product.imageUrl.startsWith('http')) {
+        const backendBaseUrl = 'http://localhost:8080';
+        product.imageUrl = `${backendBaseUrl}${product.imageUrl}`;
+      }
+    }
+
+    // Fix additional image URLs
+    if (product.images && Array.isArray(product.images)) {
+      const backendBaseUrl = 'http://localhost:8080';
+      product.images = product.images.map((imageUrl: string) => {
+        // Don't modify base64 strings - they should be used as-is
+        if (imageUrl.startsWith('data:image/')) {
+          return imageUrl;
+        }
+        // Only prepend backend URL for relative URLs
+        return imageUrl.startsWith('http') ? imageUrl : `${backendBaseUrl}${imageUrl}`;
+      });
     }
 
     // Parse variants JSON string to array

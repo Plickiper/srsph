@@ -54,6 +54,17 @@ export class OrdersComponent implements OnInit {
     private router: Router
   ) {}
 
+  hasVariants(product: any): boolean {
+    if (!product) return false;
+    const models = this.getCompatibilityModels(product);
+    return models.length > 0;
+  }
+
+  getCompatibilityModels(product: any): string[] {
+    if (!product || !product.compatibility) return [];
+    return product.compatibility.split(',').map((model: string) => model.trim());
+  }
+
   ngOnInit(): void {
     const u: any = this.authService.getCurrentUser();
     if (!u) return;

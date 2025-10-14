@@ -41,6 +41,17 @@ export class CheckoutComponent implements OnInit {
     private ordersService: OrdersService
   ) {}
 
+  hasVariants(product: any): boolean {
+    if (!product) return false;
+    const models = this.getCompatibilityModels(product);
+    return models.length > 0;
+  }
+
+  getCompatibilityModels(product: any): string[] {
+    if (!product || !product.compatibility) return [];
+    return product.compatibility.split(',').map((model: string) => model.trim());
+  }
+
   ngOnInit(): void {
     // Safe inline SVG placeholder (encoded) to avoid template quoting issues
     this.placeholderImg = 'data:image/svg+xml;utf8,%3Csvg xmlns%3D"http%3A//www.w3.org/2000/svg" width%3D"80" height%3D"80"/%3E';

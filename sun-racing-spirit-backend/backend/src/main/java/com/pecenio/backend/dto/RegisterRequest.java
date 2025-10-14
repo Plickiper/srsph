@@ -1,7 +1,6 @@
 package com.pecenio.backend.dto;
 
 import jakarta.validation.constraints.*;
-import java.time.LocalDateTime;
 
 public class RegisterRequest {
     
@@ -27,18 +26,17 @@ public class RegisterRequest {
     @Size(max = 50, message = "Phone number must not exceed 50 characters")
     private String phoneNumber;
     
-    @Pattern(regexp = "^(male|female|other|prefer-not-to-say)$", message = "Gender must be male, female, other, or prefer-not-to-say")
+    @Pattern(regexp = "^(male|female|other|prefer-not-to-say|)$", message = "Gender must be male, female, other, prefer-not-to-say, or empty")
     private String gender;
     
-    @NotNull(message = "Date of birth is required")
-    @Past(message = "Date of birth must be in the past")
-    private LocalDateTime dateOfBirth;
+    @NotBlank(message = "Date of birth is required")
+    private String dateOfBirth;
 
     // Constructors
     public RegisterRequest() {}
 
     public RegisterRequest(String username, String email, String password, String firstName, 
-                          String lastName, String phoneNumber, String gender, LocalDateTime dateOfBirth) {
+                          String lastName, String phoneNumber, String gender, String dateOfBirth) {
         this.username = username;
         this.email = email;
         this.password = password;
@@ -106,11 +104,11 @@ public class RegisterRequest {
         this.gender = gender;
     }
 
-    public LocalDateTime getDateOfBirth() {
+    public String getDateOfBirth() {
         return dateOfBirth;
     }
 
-    public void setDateOfBirth(LocalDateTime dateOfBirth) {
+    public void setDateOfBirth(String dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
     }
 }

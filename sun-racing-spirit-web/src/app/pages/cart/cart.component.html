@@ -36,10 +36,10 @@
             <h3 class="item-name">{{ (item.product && item.product.name) || 'Product' }}</h3>
             <p class="item-brand">{{ (item.product && item.product.brand) || '' }}</p>
             
-            <!-- Variant Display with Edit Option -->
-            <div class="item-variant">
+            <!-- Variant Display with Edit Option - Only show if product has variants -->
+            <div class="item-variant" *ngIf="item.product && hasVariants(item.product)">
               <span class="variant-label">Variant:</span>
-              <div class="variant-selector" *ngIf="item.product && hasVariants(item.product); else noVariants">
+              <div class="variant-selector">
                 <button class="variant-button" 
                         [class.disabled]="(getCompatibilityModels(item.product).length === 1)"
                         [attr.aria-disabled]="getCompatibilityModels(item.product).length === 1"
@@ -72,9 +72,6 @@
                   </div>
                 </div>
               </div>
-              <ng-template #noVariants>
-                <span class="variant-text">{{ formatVariantLabel(item.size) }}</span>
-              </ng-template>
             </div>
           </div>
 

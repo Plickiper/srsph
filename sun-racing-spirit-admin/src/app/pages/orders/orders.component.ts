@@ -70,7 +70,8 @@ import { AdminOrderService } from '../../services/admin-order.service';
                           <img [src]="(it.product && it.product.imageUrl) ? it.product.imageUrl : placeholderImg" alt="" class="item-image" />
                           <div class="item-info">
                             <div class="item-name">{{ (it.product && it.product.name) || 'Product' }}</div>
-                            <div class="item-meta">Variant: {{ it.compatibility || 'Universal' }} · Qty: {{ it.quantity }}</div>
+                            <div class="item-meta" *ngIf="hasVariants(it.product)">Variant: {{ it.compatibility || 'Universal' }} · </div>
+                            <div class="item-meta">Qty: {{ it.quantity }}</div>
                           </div>
                         </div>
                       </div>
@@ -163,7 +164,7 @@ import { AdminOrderService } from '../../services/admin-order.service';
                       <div class="item-name">{{ (it.product && it.product.name) || 'Product' }}</div>
                       <div class="item-meta">
                         <span class="sku-badge">SKU: {{ it.product?.partNumber || 'N/A' }}</span>
-                        <span class="variant-badge">Variant: {{ it.compatibility || 'Universal' }}</span>
+                        <span class="variant-badge" *ngIf="hasVariants(it.product)">Variant: {{ it.compatibility || 'Universal' }}</span>
                         <span class="quantity-badge">Qty: {{ it.quantity }}</span>
                       </div>
                       <div class="item-price">₱{{ (it.price * it.quantity) | number:'1.0-0' }}</div>
@@ -311,7 +312,7 @@ import { AdminOrderService } from '../../services/admin-order.service';
                       <div class="item-name">{{ (it.product && it.product.name) || 'Product' }}</div>
                       <div class="item-meta">
                         <span class="sku-badge">SKU: {{ it.product?.partNumber || 'N/A' }}</span>
-                        <span class="variant-badge">Variant: {{ it.compatibility || 'Universal' }}</span>
+                        <span class="variant-badge" *ngIf="hasVariants(it.product)">Variant: {{ it.compatibility || 'Universal' }}</span>
                         <span class="quantity-badge">Qty: {{ it.quantity }}</span>
                       </div>
                       <div class="item-price">₱{{ (it.price * it.quantity) | number:'1.0-0' }}</div>
@@ -483,7 +484,7 @@ import { AdminOrderService } from '../../services/admin-order.service';
                       <div class="item-name">{{ (it.product && it.product.name) || 'Product' }}</div>
                       <div class="item-meta">
                         <span class="sku-badge">SKU: {{ it.product?.partNumber || 'N/A' }}</span>
-                        <span class="variant-badge">Variant: {{ it.compatibility || 'Universal' }}</span>
+                        <span class="variant-badge" *ngIf="hasVariants(it.product)">Variant: {{ it.compatibility || 'Universal' }}</span>
                         <span class="quantity-badge">Qty: {{ it.quantity }}</span>
                       </div>
                       <div class="item-price">₱{{ (it.price * it.quantity) | number:'1.0-0' }}</div>
@@ -1472,6 +1473,17 @@ export class OrdersComponent implements OnInit, OnDestroy {
     private ordersService: AdminOrderService,
     private route: ActivatedRoute
   ) {}
+
+  hasVariants(product: any): boolean {
+    if (!product) return false;
+    const models = this.getCompatibilityModels(product);
+    return models.length > 0;
+  }
+
+  getCompatibilityModels(product: any): string[] {
+    if (!product || !product.compatibility) return [];
+    return product.compatibility.split(',').map((model: string) => model.trim());
+  }
 
   ngOnInit(): void {
     // Check for tab query parameter

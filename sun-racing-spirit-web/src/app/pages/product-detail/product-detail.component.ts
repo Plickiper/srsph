@@ -346,11 +346,20 @@ export class ProductDetailComponent implements OnInit {
   }
 
   buyNow(): void {
-    if (this.product && this.isVariantSelected()) {
-      // Use selected variant
-      const variant = this.selectedVariant!;
-      // Start a dedicated checkout session with exact quantity
-      this.cartService.beginCheckoutForProduct(this.product, this.quantity, variant);
+    if (this.product) {
+      if (this.hasVariants() && this.isVariantSelected()) {
+        // Use selected variant
+        const variant = this.selectedVariant!;
+        this.cartService.beginCheckoutForProduct(this.product, this.quantity, variant);
+      } else if (!this.hasVariants()) {
+        // Product without variants - use default variant
+        const defaultVariant = 'Universal';
+        this.cartService.beginCheckoutForProduct(this.product, this.quantity, defaultVariant);
+      } else {
+        // Has variants but none selected - don't proceed
+        return;
+      }
+      
       // Navigate to checkout (AuthGuard will redirect to login if needed)
       setTimeout(() => {
         window.scrollTo(0, 0);

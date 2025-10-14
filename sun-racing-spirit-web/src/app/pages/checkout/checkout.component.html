@@ -43,7 +43,7 @@
             </div>
             <div class="item-info">
               <div class="name">{{ item.product.name || 'Product' }}</div>
-              <div class="variant">Variant: {{ item.size || 'Universal' }}</div>
+              <div class="variant" *ngIf="hasVariants(item.product)">Variant: {{ item.size || 'Universal' }}</div>
               <div class="qty">Qty: {{ item.quantity }}</div>
             </div>
             <div class="item-price">₱{{ (item.price * item.quantity) | number:'1.0-0' }}</div>

@@ -21,7 +21,7 @@
             <img [src]="(it.product && it.product.imageUrl) ? it.product.imageUrl : placeholderImg" alt="" width="64" height="64" loading="lazy" />
             <div class="details">
               <div class="name">{{ (it.product && it.product.name) || 'Product' }}</div>
-              <div class="meta">Variant: {{ it.compatibility || 'Universal' }}</div>
+              <div class="meta" *ngIf="hasVariants(it.product)">Variant: {{ it.compatibility || 'Universal' }}</div>
               <div class="qty">x{{ it.quantity }}</div>
             </div>
             <div class="amount">₱{{ (it.price * it.quantity) | number:'1.0-0' }}</div>
@@ -111,7 +111,7 @@
             <div class="product-item" *ngFor="let item of itemsForRating; let i = index">
               <div class="product-details">
                 <p class="product-name">{{ item.product?.name || item.name }}</p>
-                <div class="variants-list" *ngIf="item.variants && item.variants.length > 0">
+                <div class="variants-list" *ngIf="item.variants && item.variants.length > 0 && hasVariants(item.product)">
                   <span class="variant-label">Variants:</span>
                   <span class="variant-item" *ngFor="let variant of item.variants; let isLast = last">
                     {{ variant }}<span *ngIf="!isLast">, </span>
@@ -199,7 +199,7 @@
             <div class="product-item" *ngFor="let item of selectedOrder?.items">
               <div class="product-details">
                 <p class="product-name">{{ item.product?.name || 'Product' }}</p>
-                <div class="variants-list" *ngIf="item.compatibility">
+                <div class="variants-list" *ngIf="item.compatibility && hasVariants(item.product)">
                   <span class="variant-label">Variant:</span>
                   <span class="variant-item">{{ item.compatibility }}</span>
                 </div>

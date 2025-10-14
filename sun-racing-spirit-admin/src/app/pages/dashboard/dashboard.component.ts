@@ -19,13 +19,13 @@ import { BaseComponent } from '../../core/base-component';
           <h1 class="dashboard-title">Dashboard</h1>
         </div>
       </div>
-      
+
       <!-- Loading State -->
       <div *ngIf="loading" class="loading-container">
         <div class="loading-spinner"></div>
         <p>Loading dashboard data...</p>
       </div>
-      
+
       <!-- Error State -->
       <div *ngIf="error && !loading" class="error-container">
         <div class="error-icon">⚠️</div>
@@ -33,10 +33,10 @@ import { BaseComponent } from '../../core/base-component';
         <p>{{ error }}</p>
         <button class="btn btn-primary" (click)="refreshData()">Try Again</button>
       </div>
-      
+
       <!-- Dashboard Content -->
       <div *ngIf="!loading && !error" class="dashboard-content">
-      
+
       <div class="stats-grid">
         <div class="stat-card clickable" (click)="navigateToProducts()">
           <div class="stat-icon products">
@@ -64,7 +64,7 @@ import { BaseComponent } from '../../core/base-component';
             </div>
           </div>
         </div>
-        
+
         <div class="stat-card clickable" (click)="navigateToOrders()">
           <div class="stat-icon orders">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -91,7 +91,7 @@ import { BaseComponent } from '../../core/base-component';
             </div>
           </div>
         </div>
-        
+
         <div class="stat-card clickable" (click)="navigateToOrders()">
           <div class="stat-icon revenue">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -107,7 +107,7 @@ import { BaseComponent } from '../../core/base-component';
             </div>
           </div>
         </div>
-        
+
         <div class="stat-card">
           <div class="stat-icon users">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -126,8 +126,8 @@ import { BaseComponent } from '../../core/base-component';
           </div>
         </div>
       </div>
-      
-      
+
+
       <div class="dashboard-grid">
         <div class="dashboard-card">
           <div class="card-header">
@@ -150,7 +150,7 @@ import { BaseComponent } from '../../core/base-component';
                       <div class="item-details">
                         <div class="item-name">{{ (item.product && item.product.name) || 'Product' }}</div>
                         <div class="item-meta">
-                          <span class="variant">{{ item.compatibility || 'Universal' }}</span>
+                          <span class="variant" *ngIf="hasVariants(item.product)">{{ item.compatibility || 'Universal' }}</span>
                           <span class="quantity">Qty: {{ item.quantity }}</span>
                         </div>
                       </div>
@@ -158,9 +158,9 @@ import { BaseComponent } from '../../core/base-component';
                   </div>
                 </div>
                 <div class="order-stats">
-                  <span class="status-badge" 
-                        [class.placed]="order.status==='PENDING'" 
-                        [class.out]="order.status==='SHIPPED'" 
+                  <span class="status-badge"
+                        [class.placed]="order.status==='PENDING'"
+                        [class.out]="order.status==='SHIPPED'"
                         [class.delivered]="order.status==='DELIVERED'"
                         [class.cancelled]="order.status==='CANCELLED'">
                     {{ formatOrderStatus(order.status) }}
@@ -174,7 +174,7 @@ import { BaseComponent } from '../../core/base-component';
             </div>
           </div>
         </div>
-        
+
         <div class="dashboard-card">
           <div class="card-header">
             <h3>Top Products</h3>
@@ -211,9 +211,9 @@ import { BaseComponent } from '../../core/base-component';
             </div>
           </div>
         </div>
-        
+
       </div>
-      
+
       </div> <!-- End dashboard-content -->
     </div>
   `,
@@ -223,7 +223,7 @@ import { BaseComponent } from '../../core/base-component';
       max-width: 1200px;
       margin: 0 auto;
     }
-    
+
     .dashboard-header {
       display: flex;
       align-items: center;
@@ -232,32 +232,32 @@ import { BaseComponent } from '../../core/base-component';
       flex-wrap: wrap;
       gap: 20px;
     }
-    
+
     .header-content {
       flex: 1;
     }
-    
-    
+
+
     .dashboard-title {
       font-size: 2.5rem;
       font-weight: 700;
       color: white;
       margin: 0 0 8px 0;
     }
-    
+
     .dashboard-subtitle {
       font-size: 1.1rem;
       color: rgba(255, 255, 255, 0.7);
       margin: 0;
     }
-    
+
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 24px;
       margin-bottom: 40px;
     }
-    
+
     .stat-card {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -269,7 +269,7 @@ import { BaseComponent } from '../../core/base-component';
       transition: all 0.3s ease;
       backdrop-filter: blur(10px);
     }
-    
+
     .stat-card:hover {
       background: rgba(255, 255, 255, 0.08);
       transform: translateY(-2px);
@@ -286,7 +286,7 @@ import { BaseComponent } from '../../core/base-component';
       transform: translateY(-3px);
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
     }
-    
+
     .stat-icon {
       width: 60px;
       height: 60px;
@@ -296,31 +296,31 @@ import { BaseComponent } from '../../core/base-component';
       justify-content: center;
       flex-shrink: 0;
     }
-    
+
     .stat-icon.products {
       background: linear-gradient(135deg, #ff8c00, #ffd700);
       color: white;
     }
-    
+
     .stat-icon.orders {
       background: linear-gradient(135deg, #3b82f6, #1e40af);
       color: white;
     }
-    
+
     .stat-icon.revenue {
       background: linear-gradient(135deg, #10b981, #059669);
       color: white;
     }
-    
+
     .stat-icon.users {
       background: linear-gradient(135deg, #8b5cf6, #7c3aed);
       color: white;
     }
-    
+
     .stat-content {
       flex: 1;
     }
-    
+
     .stat-number {
       font-size: 2rem;
       font-weight: 700;
@@ -328,22 +328,22 @@ import { BaseComponent } from '../../core/base-component';
       line-height: 1;
       margin-bottom: 4px;
     }
-    
+
     .stat-label {
       font-size: 0.9rem;
       color: rgba(255, 255, 255, 0.7);
       margin-bottom: 6px;
     }
-    
+
     .stat-change {
       font-size: 0.8rem;
       font-weight: 600;
     }
-    
+
     .stat-change.positive {
       color: #10b981;
     }
-    
+
     .stat-change.negative {
       color: #ef4444;
     }
@@ -429,13 +429,13 @@ import { BaseComponent } from '../../core/base-component';
       transform: scale(1.05);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
-    
+
     .dashboard-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
       gap: 24px;
     }
-    
+
     .dashboard-card {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -443,11 +443,11 @@ import { BaseComponent } from '../../core/base-component';
       backdrop-filter: blur(10px);
       overflow: hidden;
     }
-    
+
     .dashboard-card.full-width {
       grid-column: 1 / -1;
     }
-    
+
     .card-header {
       padding: 24px 24px 0 24px;
       display: flex;
@@ -495,14 +495,14 @@ import { BaseComponent } from '../../core/base-component';
       color: white;
       font-weight: 600;
     }
-    
+
     .card-header h3 {
       font-size: 1.3rem;
       font-weight: 600;
       color: white;
       margin: 0;
     }
-    
+
     .view-all-btn {
       color: #ff8c00;
       text-decoration: none;
@@ -510,21 +510,21 @@ import { BaseComponent } from '../../core/base-component';
       font-size: 0.9rem;
       transition: color 0.3s ease;
     }
-    
+
     .view-all-btn:hover {
       color: #ffd700;
     }
-    
+
     .card-content {
       padding: 0 24px 24px 24px;
     }
-    
+
     .product-list {
       display: flex;
       flex-direction: column;
       gap: 16px;
     }
-    
+
     .product-list .product-item {
       display: flex;
       align-items: center;
@@ -535,22 +535,22 @@ import { BaseComponent } from '../../core/base-component';
       border-radius: 8px;
       transition: all 0.3s ease;
     }
-    
+
     .product-list .product-item:hover {
       background: rgba(255, 255, 255, 0.06);
     }
-    
+
     .product-info {
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
-    
+
     .product-name {
       font-weight: 600;
       color: white;
     }
-    
+
     .product-category {
       font-size: 0.85rem;
       color: rgba(255, 255, 255, 0.6);
@@ -562,7 +562,7 @@ import { BaseComponent } from '../../core/base-component';
       flex-direction: column;
       gap: 8px;
     }
-    
+
     .order-item {
       display: flex;
       align-items: center;
@@ -573,11 +573,11 @@ import { BaseComponent } from '../../core/base-component';
       border-radius: 6px;
       transition: all 0.3s ease;
     }
-    
+
     .order-item:hover {
       background: rgba(255, 255, 255, 0.06);
     }
-    
+
     .order-info {
       display: flex;
       flex-direction: column;
@@ -585,38 +585,38 @@ import { BaseComponent } from '../../core/base-component';
       flex: 1;
       margin-right: 12px;
     }
-    
+
     .order-header {
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    
+
     .order-id {
       color: white;
       font-weight: 600;
       font-size: 0.85rem;
     }
-    
+
     .order-timestamp {
       color: rgba(255, 255, 255, 0.6);
       font-size: 0.8rem;
     }
-    
+
     .order-products {
       display: flex;
       flex-direction: column;
       gap: 6px;
       padding-right: 8px;
     }
-    
+
     .recent-orders-list .product-item {
       display: flex;
       align-items: center;
       justify-content: flex-start;
       gap: 8px;
     }
-    
+
     .item-image {
       width: 32px;
       height: 32px;
@@ -626,7 +626,7 @@ import { BaseComponent } from '../../core/base-component';
       border: 1px solid #222;
       flex-shrink: 0;
     }
-    
+
     .item-details {
       display: flex;
       flex-direction: column;
@@ -634,20 +634,20 @@ import { BaseComponent } from '../../core/base-component';
       align-items: flex-start;
       gap: 3px;
     }
-    
+
     .item-name {
       color: white;
       font-weight: 500;
       font-size: 0.8rem;
     }
-    
+
     .item-meta {
       display: flex;
       gap: 6px;
       align-items: center;
       justify-content: flex-start;
     }
-    
+
     .variant {
       color: rgba(255, 255, 255, 0.7);
       font-size: 0.7rem;
@@ -656,13 +656,13 @@ import { BaseComponent } from '../../core/base-component';
       border-radius: 3px;
       border: 1px solid rgba(255, 140, 0, 0.2);
     }
-    
+
     .quantity {
       color: rgba(255, 255, 255, 0.6);
       font-size: 0.7rem;
       font-weight: 500;
     }
-    
+
     .order-stats {
       display: flex;
       flex-direction: column;
@@ -671,7 +671,7 @@ import { BaseComponent } from '../../core/base-component';
       min-width: 100px;
       flex-shrink: 0;
     }
-    
+
     .status-badge {
       padding: 2px 6px;
       border-radius: 8px;
@@ -679,33 +679,33 @@ import { BaseComponent } from '../../core/base-component';
       font-weight: 600;
       text-transform: uppercase;
     }
-    
+
     .status-badge.placed {
       background: rgba(245, 158, 11, 0.2);
       color: #f59e0b;
     }
-    
+
     .status-badge.out {
       background: rgba(59, 130, 246, 0.2);
       color: #3b82f6;
     }
-    
+
     .status-badge.delivered {
       background: rgba(34, 197, 94, 0.2);
       color: #22c55e;
     }
-    
+
     .status-badge.cancelled {
       background: rgba(239, 68, 68, 0.2);
       color: #ef4444;
     }
-    
+
     .order-amount {
       color: white;
       font-weight: 600;
       font-size: 1rem;
     }
-    
+
     .product-stats {
       display: flex;
       flex-direction: column;
@@ -715,14 +715,14 @@ import { BaseComponent } from '../../core/base-component';
       text-align: right;
       min-width: 80px;
     }
-    
+
     .product-revenue {
       font-weight: 600;
       color: white;
       text-align: right;
       width: 100%;
     }
-    
+
     .product-sales {
       font-size: 0.85rem;
       color: rgba(255, 255, 255, 0.7);
@@ -730,7 +730,7 @@ import { BaseComponent } from '../../core/base-component';
       text-align: right;
       width: 100%;
     }
-    
+
     .product-category-count {
       font-size: 0.85rem;
       color: rgba(255, 255, 255, 0.7);
@@ -738,46 +738,46 @@ import { BaseComponent } from '../../core/base-component';
       text-align: right;
       width: 100%;
     }
-    
+
     .product-rating {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
       gap: 2px;
     }
-    
+
     .stars {
       display: flex;
       gap: 1px;
     }
-    
+
     .star {
       font-size: 0.8rem;
       line-height: 1;
       color: #ffd700;
     }
-    
+
     .rating-value {
       font-size: 0.75rem;
       color: rgba(255, 255, 255, 0.6);
       font-weight: 500;
     }
-    
-    
+
+
     @media (max-width: 768px) {
       .dashboard {
         padding: 20px;
       }
-      
+
       .stats-grid {
         grid-template-columns: 1fr;
       }
-      
+
       .dashboard-grid {
         grid-template-columns: 1fr;
       }
     }
-    
+
     /* Loading States */
     .loading-container {
       display: flex;
@@ -787,7 +787,7 @@ import { BaseComponent } from '../../core/base-component';
       padding: 80px 20px;
       text-align: center;
     }
-    
+
     .loading-spinner {
       width: 40px;
       height: 40px;
@@ -797,16 +797,16 @@ import { BaseComponent } from '../../core/base-component';
       animation: spin 1s ease-in-out infinite;
       margin-bottom: 20px;
     }
-    
+
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    
+
     .loading-container p {
       color: rgba(255, 255, 255, 0.7);
       font-size: 1.1rem;
     }
-    
+
     /* Error States */
     .error-container {
       display: flex;
@@ -820,24 +820,24 @@ import { BaseComponent } from '../../core/base-component';
       border-radius: 16px;
       margin-bottom: 40px;
     }
-    
+
     .error-icon {
       font-size: 3rem;
       margin-bottom: 20px;
     }
-    
+
     .error-container h3 {
       color: #ef4444;
       margin-bottom: 12px;
       font-size: 1.5rem;
     }
-    
+
     .error-container p {
       color: rgba(255, 255, 255, 0.7);
       margin-bottom: 24px;
       max-width: 400px;
     }
-    
+
     /* No Data States */
     .no-data {
       text-align: center;
@@ -857,7 +857,7 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
   pollingSubscription: Subscription | null = null;
   private readonly POLLING_INTERVAL = 300000; // 5 minutes instead of 15 seconds to reduce server load
   placeholderImg = 'data:image/svg+xml;utf8,%3Csvg xmlns%3D"http%3A//www.w3.org/2000/svg" width%3D"60" height%3D"60"/%3E';
-  
+
   constructor(
     private dashboardService: AdminDashboardService,
     private adminProductService: AdminProductService,
@@ -866,7 +866,18 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
   ) {
     super();
   }
-  
+
+  hasVariants(product: any): boolean {
+    if (!product) return false;
+    const models = this.getCompatibilityModels(product);
+    return models.length > 0;
+  }
+
+  getCompatibilityModels(product: any): string[] {
+    if (!product || !product.compatibility) return [];
+    return product.compatibility.split(',').map((model: string) => model.trim());
+  }
+
   ngOnInit() {
     this.loadDashboardData();
     // Start polling after initial data is loaded
@@ -877,11 +888,11 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
     this.stopPolling();
     super.ngOnDestroy();
   }
-  
+
   loadDashboardData() {
     this.loading = true;
     this.error = null;
-    
+
     this.dashboardService.getDashboardData().subscribe({
       next: (data) => {
         this.dashboardData = data;
@@ -898,8 +909,8 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
       }
     });
   }
-  
-  
+
+
   refreshData() {
     this.loadDashboardData();
     this.startPolling(); // Restart polling after manual refresh
@@ -970,7 +981,7 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
-    
+
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
         stars.push('★');
@@ -989,13 +1000,11 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
   }
 
   onFilterChange() {
-    // This method is called when the dropdown selection changes
-    // The filtering is handled by getFilteredTopProducts() which is called automatically
   }
 
   getFilteredTopProducts() {
     if (!this.dashboardData) return [];
-    
+
     switch (this.topProductsFilter) {
       case 'sold':
         if (!this.dashboardData.topProducts) return [];
@@ -1018,7 +1027,7 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
 
   private fetchRatingForProduct(productId: number) {
     if (this.ratingsCache.has(productId)) return;
-    
+
     // Use the injected AdminProductService
     this.adminProductService.getProductRatingStats(productId).subscribe({
       next: (stats) => {
@@ -1037,12 +1046,12 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
   private startPolling() {
     // Stop any existing polling
     this.stopPolling();
-    
+
     // Start new polling for recent orders
     this.pollingSubscription = interval(this.POLLING_INTERVAL).subscribe(() => {
       this.refreshRecentOrders();
     });
-    
+
     // Add to base component subscriptions for automatic cleanup
     this.addSubscription(this.pollingSubscription);
   }
@@ -1063,7 +1072,7 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
             // Check if the data actually changed to avoid unnecessary updates
             const currentOrders = this.dashboardData.recentOrders || [];
             const hasChanged = this.hasRecentOrdersChanged(currentOrders, recentOrders);
-            
+
             if (hasChanged) {
               this.dashboardData.recentOrders = recentOrders;
               // Trigger change detection to update the UI
@@ -1084,19 +1093,19 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
     if (current.length !== newOrders.length) {
       return true;
     }
-    
+
     // Check if any order status or details changed
     for (let i = 0; i < current.length; i++) {
       const currentOrder = current[i];
       const newOrder = newOrders[i];
-      
-      if (currentOrder.id !== newOrder.id || 
-          currentOrder.status !== newOrder.status || 
+
+      if (currentOrder.id !== newOrder.id ||
+          currentOrder.status !== newOrder.status ||
           currentOrder.totalAmount !== newOrder.totalAmount) {
         return true;
       }
     }
-    
+
     return false;
   }
 }

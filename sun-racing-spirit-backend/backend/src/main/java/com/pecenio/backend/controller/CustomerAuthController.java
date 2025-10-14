@@ -13,7 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,11 +39,18 @@ public class CustomerAuthController {
                 return ApiResponseUtil.error(passwordService.getPasswordRequirements(), HttpStatus.BAD_REQUEST);
             }
             
-            // Validate age (must be 18+)
-            LocalDateTime now = LocalDateTime.now();
-            int age = now.getYear() - request.getDateOfBirth().getYear();
-            if (now.getMonthValue() < request.getDateOfBirth().getMonthValue() || 
-                (now.getMonthValue() == request.getDateOfBirth().getMonthValue() && now.getDayOfMonth() < request.getDateOfBirth().getDayOfMonth())) {
+            // Parse date of birth string and validate age (must be 18+)
+            LocalDate dateOfBirth;
+            try {
+                dateOfBirth = LocalDate.parse(request.getDateOfBirth(), DateTimeFormatter.ISO_LOCAL_DATE);
+            } catch (Exception e) {
+                return ApiResponseUtil.error("Invalid date format. Expected YYYY-MM-DD", HttpStatus.BAD_REQUEST);
+            }
+            
+            LocalDate now = LocalDate.now();
+            int age = now.getYear() - dateOfBirth.getYear();
+            if (now.getMonthValue() < dateOfBirth.getMonthValue() || 
+                (now.getMonthValue() == dateOfBirth.getMonthValue() && now.getDayOfMonth() < dateOfBirth.getDayOfMonth())) {
                 age--;
             }
             
@@ -61,7 +69,7 @@ public class CustomerAuthController {
             user.setLastName(request.getLastName() != null ? request.getLastName().trim() : null);
             user.setPhoneNumber(request.getPhoneNumber() != null ? request.getPhoneNumber().trim() : null);
             user.setGender(request.getGender() != null ? request.getGender().trim() : null);
-            user.setDateOfBirth(request.getDateOfBirth());
+            user.setDateOfBirth(dateOfBirth.atStartOfDay());
             
             User createdUser = userService.createUser(user);
             

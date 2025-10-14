@@ -38,5 +38,6 @@ com\pecenio\backend\exception\GlobalExceptionHandler.class
 com\pecenio\backend\interceptor\RateLimitingInterceptor$RateLimitInfo.class
 com\pecenio\backend\dto\OrderRequest$OrderItemRequest.class
 com\pecenio\backend\controller\RatingController.class
+com\pecenio\backend\controller\ProductImageController.class
 com\pecenio\backend\service\PasswordService.class
 com\pecenio\backend\service\ProductService.class
