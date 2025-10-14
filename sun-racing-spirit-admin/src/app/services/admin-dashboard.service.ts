@@ -67,7 +67,7 @@ export class AdminDashboardService {
         catchError(() => of([]))
       ),
       this.userService.getAllUsers().pipe(catchError(() => of([]))),
-      this.orderService.getRecentOrders(10).pipe(catchError(() => of([]))) // Only recent orders
+      this.orderService.getAllOrders().pipe(catchError(() => of([]))) // Get ALL orders for accurate stats
     ]).pipe(
       map(([products, users, orders]) => {
         // Process orders data once instead of multiple calls
@@ -131,9 +131,8 @@ export class AdminDashboardService {
         // Filter out admin/staff users to only count customers
         const customerUsers = Array.isArray(users) ? users.filter(user => user.role === 'CUSTOMER') : [];
         
-        // Calculate revenue only from completed orders (excluding shipping fee)
-        const completedOrdersRevenue = Array.isArray(orders) ? orders
-          .filter((order: any) => order.status === 'DELIVERED')
+        // Calculate revenue from all orders (excluding shipping fee)
+        const totalRevenue = Array.isArray(orders) ? orders
           .reduce((sum: number, order: any) => {
             // Use totalPrice which excludes shipping fee
             return sum + (order.totalPrice || 0);
@@ -142,7 +141,7 @@ export class AdminDashboardService {
         const stats: DashboardStats = {
           totalProducts: products.length,
           totalOrders: orderStats.totalOrders,
-          totalRevenue: completedOrdersRevenue, // Only count revenue from completed orders
+          totalRevenue: totalRevenue, // Count revenue from all orders
           totalUsers: customerUsers.length, // Only count customers
           pendingOrders: orderStats.pendingOrders,
           completedOrders: orderStats.completedOrders,
@@ -324,7 +323,7 @@ export class AdminDashboardService {
 
   private calculateOrderStats(orders: any[]): OrderStats {
     const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalPrice || order.totalAmount || 0), 0);
     const pendingOrders = orders.filter(order => order.status === 'PENDING').length;
     const completedOrders = orders.filter(order => order.status === 'DELIVERED').length;
     const processingOrders = orders.filter(order => order.status === 'SHIPPED').length;

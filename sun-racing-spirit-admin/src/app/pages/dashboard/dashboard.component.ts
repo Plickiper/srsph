@@ -948,10 +948,10 @@ export class DashboardComponent extends BaseComponent implements OnInit, OnDestr
 
   formatOrderStatus(status: string): string {
     switch (status) {
-      case 'PLACED':
-        return 'PLACED';
-      case 'OUT_FOR_DELIVERY':
-        return 'OUT FOR DELIVERY';
+      case 'PENDING':
+        return 'PENDING';
+      case 'SHIPPED':
+        return 'SHIPPED';
       case 'DELIVERED':
         return 'DELIVERED';
       case 'CANCELLED':
