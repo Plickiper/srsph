@@ -69,11 +69,18 @@ export class AdminProductService {
   constructor(private http: HttpClient) { }
 
   private getAuthHeaders(): HttpHeaders {
-    // Get user from localStorage or session
-    const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      throw new Error('User not authenticated');
+    }
+
+    const currentUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const adminRole = currentUser?.role || 'SUPER_ADMIN';
+
     return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      'Admin-Role': user.role || 'SUPER_ADMIN'
+      'Admin-Role': adminRole
     });
   }
 
@@ -220,9 +227,17 @@ export class AdminProductService {
     formData.append('file', file);
     
     // Create headers specifically for file upload - don't include Content-Type
-    const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      throw new Error('User not authenticated');
+    }
+
+    const currentUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const adminRole = currentUser?.role || 'SUPER_ADMIN';
+
     const headers = new HttpHeaders({
-      'Admin-Role': user.role || 'SUPER_ADMIN'
+      'Authorization': `Bearer ${token}`,
+      'Admin-Role': adminRole
       // Don't set Content-Type - let browser set it with boundary for multipart
     });
     

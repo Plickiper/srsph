@@ -11,10 +11,6 @@ import { AdminOrderService } from '../../services/admin-order.service';
     <div class="page-container">
       <div class="page-header">
         <h1>Orders</h1>
-        <button class="btn btn-secondary refresh-btn" (click)="refresh()" [disabled]="loading">
-          <span class="refresh-icon">🔄</span>
-          Refresh
-        </button>
       </div>
       <div class="page-content">
         <div class="tabs">
@@ -673,38 +669,6 @@ import { AdminOrderService } from '../../services/admin-order.service';
       margin: 0;
     }
     
-    .refresh-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: 0.9rem;
-    }
-    
-    .refresh-btn:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: rgba(255, 255, 255, 0.3);
-    }
-    
-    .refresh-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    
-    .refresh-icon {
-      font-size: 1rem;
-      transition: transform 0.3s ease;
-    }
-    
-    .refresh-btn:hover:not(:disabled) .refresh-icon {
-      transform: rotate(180deg);
-    }
     
     .page-content {
       display: flex;
@@ -1587,16 +1551,32 @@ export class OrdersComponent implements OnInit, OnDestroy {
   }
 
   markOutForDelivery(o: any) {
-    this.ordersService.updateOrderStatus(o.id, 'SHIPPED').subscribe(resp => {
-      o.status = 'SHIPPED';
-      this.refresh();
+    console.log('Updating order #' + o.id + ' to SHIPPED status');
+    this.ordersService.updateOrderStatus(o.id, 'SHIPPED').subscribe({
+      next: (resp) => {
+        console.log('Order status update successful:', resp);
+        o.status = 'SHIPPED';
+        this.refresh();
+      },
+      error: (error) => {
+        console.error('Error updating order status:', error);
+        alert('Failed to update order status: ' + (error.error?.message || error.message || 'Unknown error'));
+      }
     });
   }
 
   markDelivered(o: any) {
-    this.ordersService.updateOrderStatus(o.id, 'DELIVERED').subscribe(resp => {
-      o.status = 'DELIVERED';
-      this.refresh();
+    console.log('Updating order #' + o.id + ' to DELIVERED status');
+    this.ordersService.updateOrderStatus(o.id, 'DELIVERED').subscribe({
+      next: (resp) => {
+        console.log('Order status update successful:', resp);
+        o.status = 'DELIVERED';
+        this.refresh();
+      },
+      error: (error) => {
+        console.error('Error updating order status:', error);
+        alert('Failed to update order status: ' + (error.error?.message || error.message || 'Unknown error'));
+      }
     });
   }
 
@@ -1735,6 +1715,14 @@ export class OrdersComponent implements OnInit, OnDestroy {
     }
     // If URL starts with /, prepend backend URL
     if (url.startsWith('/')) {
+      // Handle old format URLs that need to be converted to new format
+      if (url.startsWith('/uploads/waybills/')) {
+        return 'http://localhost:8080/api/static/waybills/' + url.substring('/uploads/waybills/'.length);
+      }
+      if (url.startsWith('/uploads/delivery-proofs/')) {
+        return 'http://localhost:8080/api/static/delivery-proofs/' + url.substring('/uploads/delivery-proofs/'.length);
+      }
+      // For other URLs, use as is
       return 'http://localhost:8080' + url;
     }
     // Otherwise, assume it's a relative path and prepend backend URL

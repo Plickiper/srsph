@@ -17,6 +17,7 @@ C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\dto\RegisterRequest.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\service\UserService.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\service\ProductService.java
+C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\interceptor\RequestLoggingInterceptor.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\controller\OrderController.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\controller\ProductImageController.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\service\PasswordService.java
@@ -30,6 +31,7 @@ C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\config\WebConfig.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\interceptor\RateLimitingInterceptor.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\service\impl\ProductServiceImpl.java
+C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\controller\StaticFileController.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\config\DataInitializer.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\dto\CancelOrderRequest.java
 C:\Users\Kurt\Desktop\Projects\SunRacingSpirit\sun-racing-spirit-backend\backend\src\main\java\com\pecenio\backend\service\impl\CartServiceImpl.java

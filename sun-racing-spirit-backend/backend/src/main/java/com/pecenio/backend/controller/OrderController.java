@@ -3,6 +3,10 @@ package com.pecenio.backend.controller;
 import com.pecenio.backend.dto.OrderRequest;
 import com.pecenio.backend.dto.CancelOrderRequest;
 import com.pecenio.backend.util.ApiResponseUtil;
+import com.pecenio.backend.service.AuditLogService;
+import com.pecenio.businessmodel.entity.AuditLog;
+import com.pecenio.backend.util.JwtAuthUtil;
+import com.pecenio.backend.service.JwtService;
 import com.pecenio.datamodel.entity.OrderEntity;
 import com.pecenio.datamodel.entity.OrderItemEntity;
 import com.pecenio.datamodel.entity.UserEntity;
@@ -20,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,11 +37,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/orders")
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201", "http://localhost:53515"})
 public class OrderController {
+
+    private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
 
     @Autowired
     private OrderRepository orderRepository;
@@ -49,13 +57,24 @@ public class OrderController {
     
     @Autowired
     private OrderItemRepository orderItemRepository;
+    
+    @Autowired
+    private AuditLogService auditLogService;
+    
+    @Autowired
+    private JwtAuthUtil jwtAuthUtil;
+    
+    @Autowired
+    private JwtService jwtService;
 
     @GetMapping
     @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getAllOrders(
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String order) {
+            @RequestParam(required = false) String order,
+            HttpServletRequest request) {
+        logger.info("📦 GET /api/orders - Fetching orders (limit: {})", limit);
         try {
             List<OrderEntity> entities;
             
@@ -71,6 +90,8 @@ public class OrderController {
                 // Get all orders sorted by creation date descending (most recent first)
                 entities = orderRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
             }
+            
+            logger.info("✅ Found {} orders", entities.size());
             
             // Convert to simple DTOs to avoid circular references - include order items with products
             List<Map<String, Object>> orders = entities.stream()
@@ -92,6 +113,30 @@ public class OrderController {
             headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
             headers.add("Pragma", "no-cache");
             headers.add("Expires", "0");
+            
+            // Log order viewing in audit log (staff action only)
+            try {
+                UserEntity currentAdmin = getCurrentAdminUser(request);
+                if (currentAdmin != null) {
+                    auditLogService.logAction(
+                        currentAdmin.getId(),
+                        currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        currentAdmin.getEmail(),
+                        "VIEW_ORDERS",
+                        "ORDER",
+                        null, // No specific order ID for list view
+                        "Orders List",
+                        currentAdmin.getFirstName() + " " + currentAdmin.getLastName() + " viewed orders list (limit: " + (limit != null ? limit : "all") + ")",
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.READ,
+                        AuditLog.Severity.LOW
+                    );
+                }
+            } catch (Exception auditException) {
+                // Audit logging failed, but continue with operation
+                logger.warn("Failed to log order viewing audit: {}", auditException.getMessage());
+            }
             
             return ResponseEntity.ok().headers(headers).body(responseBody);
         } catch (Exception e) {
@@ -121,6 +166,9 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createOrder(@Valid @RequestBody OrderRequest orderRequest) {
+        logger.info("=== ORDER CONTROLLER ===");
+        logger.info("POST /api/orders - Create order request received");
+        logger.info("Order request: userId={}, items count={}", orderRequest.getUserId(), orderRequest.getItems().size());
         try {
             // Get user
             UserEntity user = userRepository.findById(orderRequest.getUserId())
@@ -202,6 +250,9 @@ public class OrderController {
             // Re-fetch the order with items to return complete data
             OrderEntity completeOrder = orderRepository.findById(savedOrder.getId()).orElse(savedOrder);
             
+            // Note: Customer order creation is not logged in admin audit log
+            // Only staff/admin interactions with orders are logged
+            
             return ApiResponseUtil.created(convertToSimpleOrder(completeOrder), "Order created successfully");
             
         } catch (Exception e) {
@@ -212,7 +263,8 @@ public class OrderController {
     @PutMapping("/{orderId}/waybill")
     public ResponseEntity<Map<String, Object>> uploadWaybillProof(
             @PathVariable Long orderId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -246,10 +298,34 @@ public class OrderController {
             Files.copy(file.getInputStream(), filePath);
             
             // Update order with waybill proof URL
-            String waybillUrl = "/uploads/waybills/" + filename;
+            String waybillUrl = "/api/static/waybills/" + filename;
             order.setWaybillProofUrl(waybillUrl);
             order.setStatus(OrderEntity.OrderStatus.SHIPPED);
             orderRepository.save(order);
+            
+            // Log waybill upload and status change in audit log (staff action only)
+            try {
+                UserEntity currentAdmin = getCurrentAdminUser(request);
+                if (currentAdmin != null) {
+                    auditLogService.logAction(
+                        currentAdmin.getId(),
+                        currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        currentAdmin.getEmail(),
+                        "UPLOAD_WAYBILL",
+                        "ORDER",
+                        order.getId(),
+                        "Order #" + order.getId(),
+                        "Waybill proof uploaded for Order #" + order.getId() + " - Status changed to SHIPPED by " + currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.UPDATE,
+                        AuditLog.Severity.MEDIUM
+                    );
+                }
+            } catch (Exception auditException) {
+                // Audit logging failed, but continue with operation
+                logger.warn("Failed to log waybill upload audit: {}", auditException.getMessage());
+            }
             
             response.put("success", true);
             response.put("message", "Waybill proof uploaded successfully");
@@ -267,7 +343,8 @@ public class OrderController {
     @PutMapping("/{orderId}/delivery-proof")
     public ResponseEntity<Map<String, Object>> uploadDeliveryProof(
             @PathVariable Long orderId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -301,7 +378,7 @@ public class OrderController {
             Files.copy(file.getInputStream(), filePath);
             
             // Update order with delivery proof URL
-            String deliveryUrl = "/uploads/delivery-proofs/" + filename;
+            String deliveryUrl = "/api/static/delivery-proofs/" + filename;
             order.setDeliveryProofUrl(deliveryUrl);
             order.setStatus(OrderEntity.OrderStatus.DELIVERED);
             orderRepository.save(order);
@@ -376,6 +453,30 @@ public class OrderController {
                 }
             }
             
+            // Log delivery proof upload and status change in audit log (staff action only)
+            try {
+                UserEntity currentAdmin = getCurrentAdminUser(request);
+                if (currentAdmin != null) {
+                    auditLogService.logAction(
+                        currentAdmin.getId(),
+                        currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        currentAdmin.getEmail(),
+                        "UPLOAD_DELIVERY_PROOF",
+                        "ORDER",
+                        order.getId(),
+                        "Order #" + order.getId(),
+                        "Delivery proof uploaded for Order #" + order.getId() + " - Status changed to DELIVERED by " + currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.UPDATE,
+                        AuditLog.Severity.MEDIUM
+                    );
+                }
+            } catch (Exception auditException) {
+                // Audit logging failed, but continue with operation
+                logger.warn("Failed to log delivery proof upload audit: {}", auditException.getMessage());
+            }
+            
             response.put("success", true);
             response.put("message", "Delivery proof uploaded successfully and stock updated");
             response.put("deliveryUrl", deliveryUrl);
@@ -385,6 +486,83 @@ public class OrderController {
         } catch (Exception e) {
             response.put("success", false);
             response.put("error", "Failed to upload delivery proof: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @PutMapping("/{orderId}/status")
+    public ResponseEntity<Map<String, Object>> updateOrderStatus(
+            @PathVariable Long orderId,
+            @RequestBody Map<String, String> statusRequest,
+            HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Find the order
+            OrderEntity order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("Order not found"));
+            
+            String newStatus = statusRequest.get("status");
+            if (newStatus == null || newStatus.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("error", "Status is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Validate status
+            OrderEntity.OrderStatus orderStatus;
+            try {
+                orderStatus = OrderEntity.OrderStatus.valueOf(newStatus.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                response.put("success", false);
+                response.put("error", "Invalid status: " + newStatus);
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Store old status for audit log
+            String oldStatus = order.getStatus().name();
+            
+            // Update order status
+            order.setStatus(orderStatus);
+            order.setUpdatedAt(LocalDateTime.now());
+            orderRepository.save(order);
+            
+            // Log order status update in audit log (staff action only)
+            try {
+                UserEntity currentAdmin = getCurrentAdminUser(request);
+                if (currentAdmin != null) {
+                    auditLogService.logAction(
+                        currentAdmin.getId(),
+                        currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        currentAdmin.getEmail(),
+                        "UPDATE_ORDER_STATUS",
+                        "ORDER",
+                        order.getId(),
+                        "Order #" + order.getId(),
+                        "Order #" + order.getId() + " status changed from " + oldStatus + " to " + newStatus.toUpperCase() + " by " + currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.UPDATE,
+                        AuditLog.Severity.MEDIUM
+                    );
+                }
+            } catch (Exception auditException) {
+                // Audit logging failed, but continue with operation
+                logger.warn("Failed to log order status update audit: {}", auditException.getMessage());
+            }
+            
+            response.put("success", true);
+            response.put("message", "Order status updated successfully");
+            response.put("orderId", order.getId());
+            response.put("oldStatus", oldStatus);
+            response.put("newStatus", newStatus.toUpperCase());
+            response.put("updatedAt", order.getUpdatedAt());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", "Failed to update order status: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -413,6 +591,9 @@ public class OrderController {
             
             // Save the updated order
             orderRepository.save(order);
+            
+            // Note: Customer order cancellation is not logged in admin audit log
+            // Only staff/admin interactions with orders are logged
             
             response.put("success", true);
             response.put("message", "Order cancelled successfully");
@@ -601,5 +782,42 @@ public class OrderController {
         }
         
         return item;
+    }
+    
+    private String getClientIpAddress(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
+            return xRealIp;
+        }
+        return request.getRemoteAddr();
+    }
+    
+    private UserEntity getCurrentAdminUser(HttpServletRequest request) {
+        try {
+            String token = jwtAuthUtil.extractTokenFromRequest(request);
+            logger.info("🔍 OrderController - Token extracted: {}", token != null ? "YES" : "NO");
+            
+            if (token != null && jwtAuthUtil.isTokenValid(token)) {
+                String username = jwtService.extractUsername(token);
+                logger.info("🔍 OrderController - Username extracted: {}", username);
+                
+                UserEntity user = userRepository.findByUsername(username).orElse(null);
+                if (user != null) {
+                    logger.info("🔍 OrderController - User found: {} {} ({})", user.getFirstName(), user.getLastName(), user.getRole());
+                } else {
+                    logger.warn("🔍 OrderController - User not found for username: {}", username);
+                }
+                return user;
+            } else {
+                logger.warn("🔍 OrderController - Token is null or invalid");
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to get current admin user: {}", e.getMessage());
+        }
+        return null;
     }
 }

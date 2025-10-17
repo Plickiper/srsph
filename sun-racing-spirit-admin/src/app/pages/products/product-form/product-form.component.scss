@@ -29,22 +29,23 @@
 .custom-select-wrapper {
   position: relative;
   width: 100%;
+  display: flex;
+  align-items: center;
 }
 
-.custom-select-wrapper::after {
-  content: '▼';
+.custom-select-wrapper .dropdown-icon {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: white;
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
   pointer-events: none;
   z-index: 2;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
 }
 
-.custom-select-wrapper.open::after {
+.custom-select-wrapper .dropdown-icon.rotated {
   transform: translateY(-50%) rotate(180deg);
 }
 
@@ -67,10 +68,10 @@
 }
 
 .custom-select:focus {
-  outline: none;
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.08);
+  outline: none !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: none !important;
 }
 
 .custom-select option {
@@ -102,19 +103,39 @@ select.form-control:focus {
   color: rgba(255, 255, 255, 0.5); 
 }
 .form-textarea { 
-  resize: vertical !important; 
-  min-height: 100px; 
+  resize: none !important; 
+  min-height: 60px; 
+  max-height: 400px;
   max-width: 100% !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  overflow-y: auto;
+  transition: height 0.2s ease;
 }
 
 /* More specific rule for description textarea */
 #description.form-control.form-textarea {
-  resize: vertical !important;
+  resize: none !important;
+  min-height: 60px;
+  max-height: 400px;
   max-width: 100% !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  overflow-y: auto;
+  transition: height 0.2s ease;
+}
+
+.character-counter {
+  text-align: right;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+  transition: color 0.2s ease;
+}
+
+.character-counter.warning {
+  color: #f59e0b;
+  font-weight: 500;
 }
 .error-message { color: #ef4444; font-size: 0.8rem; margin-top: 4px; }
 .form-help { color: rgba(255, 255, 255, 0.6); font-size: 0.8rem; margin-top: 4px; }
@@ -259,6 +280,34 @@ select.form-control:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.main-image-item .product-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  border-radius: 6px;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+  border-radius: 8px;
 }
 
 .main-image-placeholder {
@@ -673,21 +722,6 @@ input:checked + .slider:before {
   object-position: center;
 }
 
-.image-overlay { 
-  position: absolute;
-  top: 0; 
-  left: 0; 
-  right: 0; 
-  bottom: 0; 
-  background: rgba(0, 0, 0, 0.7); 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px; 
-  opacity: 0;
-  transition: opacity 0.3s ease; 
-  z-index: 10;
-}
 
 .image-item:hover .image-overlay,
 .main-image-item:hover .image-overlay { 

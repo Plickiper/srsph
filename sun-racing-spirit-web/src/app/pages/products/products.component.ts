@@ -45,11 +45,11 @@ import { ProductListComponent } from '../../components/product-list/product-list
           </select>
           
           <select [(ngModel)]="sortBy" (change)="onSortChange()" class="filter-select">
-            <option value="name">Sort by Name</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
+            <option value="latest">Latest</option>
             <option value="most-sold">Most Sold</option>
             <option value="top-rated">Top Rated</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
           </select>
         </div>
 
@@ -148,7 +148,7 @@ export class ProductsComponent implements OnInit {
   categories: string[] = [];
   loading = false;
   inStockOnly = false;
-  sortBy = 'name';
+  sortBy = 'latest';
 
   filters: ProductFilters = {
     search: '',
@@ -231,8 +231,8 @@ export class ProductsComponent implements OnInit {
   sortProducts(products: Product[]): Product[] {
     const sorted = [...products];
     switch (this.sortBy) {
-      case 'name':
-        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      case 'latest':
+        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       case 'price-low':
         return sorted.sort((a, b) => a.price - b.price);
       case 'price-high':

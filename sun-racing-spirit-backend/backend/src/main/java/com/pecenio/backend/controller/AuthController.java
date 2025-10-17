@@ -13,17 +13,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:4201", "http://localhost:53515", "http://localhost:51316"})
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
     private UserService userService;
@@ -48,8 +50,11 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> adminLogin(
             @RequestBody Map<String, String> loginRequest,
             HttpServletRequest request) {
+        logger.info("=== AUTH CONTROLLER ===");
+        logger.info("POST /api/auth/admin/login - Admin login request received");
         String usernameOrEmail = loginRequest.get("usernameOrEmail");
         String password = loginRequest.get("password");
+        logger.info("Login attempt for user: {}", usernameOrEmail);
         try {
             User user = userService.login(usernameOrEmail, password);
             

@@ -60,6 +60,51 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     this.isDropdownOpen = false;
   }
 
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    
+    // Close category dropdown if clicking outside
+    const categoryWrapper = target.closest('.custom-select-wrapper');
+    if (!categoryWrapper) {
+      this.isDropdownOpen = false;
+    }
+    
+    // Close compatibility dropdown if clicking outside
+    if (this.compatibilityDropdown && !this.compatibilityDropdown.nativeElement.contains(event.target)) {
+      this.isCompatibilityOpen = false;
+    }
+  }
+
+  toggleCategoryDropdown(): void {
+    this.isDropdownOpen = !this.isDropdownOpen;
+  }
+
+  onCategoryChange(): void {
+    this.isDropdownOpen = false;
+  }
+
+  onDescriptionInput(event: any): void {
+    this.autoResizeTextarea(event.target);
+  }
+
+  onDescriptionChange(): void {
+    // Trigger auto-resize when model changes
+    setTimeout(() => {
+      const textarea = document.getElementById('description') as HTMLTextAreaElement;
+      if (textarea) {
+        this.autoResizeTextarea(textarea);
+      }
+    });
+  }
+
+  autoResizeTextarea(textarea: HTMLTextAreaElement): void {
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+    // Set height to scrollHeight to fit content
+    textarea.style.height = textarea.scrollHeight + 'px';
+  }
+
   // TrackBy functions to prevent Angular diff errors
   trackByImageIndex(index: number, image: string): string {
     return image || index.toString();
@@ -109,6 +154,14 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       this.isEditMode = true;
       this.loadProduct(parseInt(productId));
     }
+    
+    // Initialize auto-resize for description textarea
+    setTimeout(() => {
+      const textarea = document.getElementById('description') as HTMLTextAreaElement;
+      if (textarea) {
+        this.autoResizeTextarea(textarea);
+      }
+    }, 100);
   }
 
   ngOnDestroy(): void {
@@ -161,6 +214,14 @@ export class ProductFormComponent implements OnInit, OnDestroy {
           
           // Update pricing mode based on loaded data
           this.updatePricingMode();
+          
+          // Auto-resize description textarea after product is loaded
+          setTimeout(() => {
+            const textarea = document.getElementById('description') as HTMLTextAreaElement;
+            if (textarea) {
+              this.autoResizeTextarea(textarea);
+            }
+          }, 100);
         }
       },
       error: (error: any) => {
@@ -186,6 +247,12 @@ export class ProductFormComponent implements OnInit, OnDestroy {
 
     if (!this.product.partNumber?.trim()) {
       this.errorMessage = 'Product part number is required';
+      return;
+    }
+
+    // Validate description length
+    if (this.product.description && this.product.description.length > 2000) {
+      this.errorMessage = 'Description must not exceed 2000 characters';
       return;
     }
 
@@ -589,10 +656,8 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     if (this.selectedCompatibilityModels.length > 1) {
       // Multiple models selected - enable variant pricing
       this.useVariantPricing = true;
-      // Only initialize variants if we don't already have variant data
-      if (this.productVariants.length === 0) {
-        this.initializeVariants();
-      }
+      // Always sync variants with selected models
+      this.syncVariantsWithSelectedModels();
     } else if (this.selectedCompatibilityModels.length === 1) {
       // Single model selected - disable variant pricing, use single price
       this.useVariantPricing = false;
@@ -606,8 +671,8 @@ export class ProductFormComponent implements OnInit, OnDestroy {
 
   toggleVariantPricing(): void {
     this.useVariantPricing = !this.useVariantPricing;
-    if (this.useVariantPricing && this.productVariants.length === 0) {
-      this.initializeVariants();
+    if (this.useVariantPricing && this.selectedCompatibilityModels.length > 1) {
+      this.syncVariantsWithSelectedModels();
     }
   }
 
@@ -618,6 +683,31 @@ export class ProductFormComponent implements OnInit, OnDestroy {
         price: this.product.price,
         stockQuantity: Math.floor(this.product.stockQuantity / this.selectedCompatibilityModels.length)
       }));
+    }
+  }
+
+  syncVariantsWithSelectedModels(): void {
+    if (this.selectedCompatibilityModels.length > 0) {
+      // Create a map of existing variants for quick lookup
+      const existingVariants = new Map();
+      this.productVariants.forEach(variant => {
+        existingVariants.set(variant.model, variant);
+      });
+
+      // Create new variants array based on selected models
+      this.productVariants = this.selectedCompatibilityModels.map(model => {
+        if (existingVariants.has(model)) {
+          // Keep existing variant data (price, stock) if model was already selected
+          return existingVariants.get(model);
+        } else {
+          // Create new variant for newly selected model
+          return {
+            model: model,
+            price: this.product.price,
+            stockQuantity: Math.floor(this.product.stockQuantity / this.selectedCompatibilityModels.length)
+          };
+        }
+      });
     }
   }
 
@@ -686,7 +776,9 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   }
 
   removeCurrentImage(): void {
+    console.log('removeCurrentImage called');
     this.product.imageUrl = '';
+    this.previewImageUrl = '';
   }
 
 
@@ -772,6 +864,7 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   }
 
   triggerMainFileInput(): void {
+    console.log('triggerMainFileInput called');
     if (this.mainFileInput) {
       this.mainFileInput.nativeElement.click();
     }
@@ -783,10 +876,4 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     }
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: Event): void {
-    if (this.compatibilityDropdown && !this.compatibilityDropdown.nativeElement.contains(event.target)) {
-      this.isCompatibilityOpen = false;
-    }
-  }
 }

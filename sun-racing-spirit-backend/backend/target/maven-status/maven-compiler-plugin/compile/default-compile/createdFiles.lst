@@ -1,10 +1,12 @@
 com\pecenio\backend\controller\AuthController$CreateStaffRequest.class
 com\pecenio\backend\service\impl\ProductServiceImpl.class
 com\pecenio\backend\controller\GuestCartController.class
+com\pecenio\backend\controller\StaticFileController.class
 com\pecenio\backend\dto\CancelOrderRequest.class
 com\pecenio\backend\config\DataInitializer.class
 com\pecenio\backend\service\impl\UserServiceImpl.class
 com\pecenio\backend\config\WebConfig.class
+com\pecenio\backend\interceptor\RequestLoggingInterceptor.class
 com\pecenio\backend\config\ApiConfig.class
 com\pecenio\backend\dto\RatingRequest.class
 com\pecenio\backend\service\impl\ProductServiceImpl$1.class

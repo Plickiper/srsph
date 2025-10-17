@@ -52,9 +52,8 @@
               [(ngModel)]="product.category" 
               required 
               class="custom-select"
-              (focus)="isDropdownOpen = true"
-              (blur)="isDropdownOpen = false"
-              (change)="isDropdownOpen = false">
+              (click)="toggleCategoryDropdown()"
+              (change)="onCategoryChange()">
               <option value="">Select Category</option>
               <option value="Backplate">Backplate</option>
               <option value="Brake Shoe">Brake Shoe</option>
@@ -74,6 +73,9 @@
               <option value="Slider">Slider</option>
               <option value="Torque Drive">Torque Drive</option>
             </select>
+            <svg class="dropdown-icon" [class.rotated]="isDropdownOpen" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"></path>
+            </svg>
           </div>
         </div>
 
@@ -104,8 +106,13 @@
           name="description" 
           [(ngModel)]="product.description" 
           class="form-control form-textarea"
-          rows="6"
-          placeholder="Detailed product description, features, and benefits..."></textarea>
+          placeholder="Detailed product description, features, and benefits..."
+          (input)="onDescriptionInput($event)"
+          (ngModelChange)="onDescriptionChange()"
+          maxlength="2000"></textarea>
+        <div class="character-counter" [class.warning]="(product.description?.length || 0) > 1800">
+          {{ (product.description?.length || 0) }}/2000 characters
+        </div>
       </div>
 
       <!-- Product Images -->

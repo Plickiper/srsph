@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, map, catchError, of } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, map, catchError, of, throwError } from 'rxjs';
 
 export interface OrderItem {
   id: number;
@@ -52,6 +52,27 @@ export class AdminOrderService {
   private apiUrl = 'http://localhost:8080/api';
 
   constructor(private http: HttpClient) {}
+
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      throw new Error('User not authenticated');
+    }
+
+    const currentUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const adminRole = currentUser?.role || 'SUPER_ADMIN';
+
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Admin-Role': adminRole
+    });
+  }
+
+  private handleError(error: any): Observable<never> {
+    console.error('Error in AdminOrderService:', error);
+    return throwError(() => error);
+  }
 
   getRecentOrders(limit: number = 10): Observable<Order[]> {
     // Add timestamp to prevent caching
@@ -171,21 +192,49 @@ export class AdminOrderService {
 
 
   updateOrderStatus(id: number, status: string): Observable<Order> {
-    // TODO: Implement actual API call
-    return this.getOrder(id).pipe(
-      map(order => ({ ...order, status, updatedAt: new Date().toISOString() }))
+    const headers = this.getAuthHeaders();
+    return this.http.put<Order>(`${this.apiUrl}/orders/${id}/status`, 
+      { status }, 
+      { headers }
+    ).pipe(
+      map(response => response as any),
+      catchError(this.handleError)
     );
   }
 
   uploadWaybillProof(orderId: number, file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.put<any>(`${this.apiUrl}/orders/${orderId}/waybill`, formData);
+    
+    // Create headers specifically for file upload - don't include Content-Type
+    const token = localStorage.getItem('admin_token');
+    const currentUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const adminRole = currentUser?.role || 'SUPER_ADMIN';
+    
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Admin-Role': adminRole
+      // Don't set Content-Type - let browser set it with boundary for multipart
+    });
+    
+    return this.http.put<any>(`${this.apiUrl}/orders/${orderId}/waybill`, formData, { headers });
   }
 
   uploadDeliveryProof(orderId: number, file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.put<any>(`${this.apiUrl}/orders/${orderId}/delivery-proof`, formData);
+    
+    // Create headers specifically for file upload - don't include Content-Type
+    const token = localStorage.getItem('admin_token');
+    const currentUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const adminRole = currentUser?.role || 'SUPER_ADMIN';
+    
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Admin-Role': adminRole
+      // Don't set Content-Type - let browser set it with boundary for multipart
+    });
+    
+    return this.http.put<any>(`${this.apiUrl}/orders/${orderId}/delivery-proof`, formData, { headers });
   }
 }

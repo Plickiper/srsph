@@ -2,10 +2,14 @@ package com.pecenio.backend.controller;
 
 import com.pecenio.backend.service.ProductService;
 import com.pecenio.backend.service.AuditLogService;
+import com.pecenio.backend.service.JwtService;
+import com.pecenio.backend.util.JwtAuthUtil;
 import com.pecenio.backend.dto.ProductRequest;
 import com.pecenio.backend.util.ApiResponseUtil;
 import com.pecenio.businessmodel.entity.Product;
 import com.pecenio.businessmodel.entity.AuditLog;
+import com.pecenio.datamodel.entity.UserEntity;
+import com.pecenio.datamodel.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,21 +22,36 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ProductController.class);
 
     @Autowired
     private ProductService productService;
     
     @Autowired
     private AuditLogService auditLogService;
+    
+    @Autowired
+    private JwtAuthUtil jwtAuthUtil;
+    
+    @Autowired
+    private JwtService jwtService;
+    
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllProducts() {
+        logger.info("🛍️ GET /api/products - Fetching products");
         try {
             List<Product> products = productService.getAllProducts();
+            logger.info("✅ Found {} products", products.size());
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("products", products);
@@ -78,20 +97,43 @@ public class ProductController {
             Product createdProduct = productService.createProduct(product);
             
             // Log the product creation
-            auditLogService.logAction(
-                1L, // Default admin user ID
-                "Admin", // Use current user or default
-                "admin@sunracing.com", // Default admin email
-                "CREATE_PRODUCT",
-                "PRODUCT",
-                createdProduct.getId(),
-                createdProduct.getName(),
-                "Product '" + createdProduct.getName() + "' was created",
-                getClientIpAddress(request),
-                request.getHeader("User-Agent"),
-                AuditLog.ActionType.CREATE,
-                AuditLog.Severity.MEDIUM
-            );
+            try {
+                UserEntity currentAdmin = getCurrentAdminUser(request);
+                if (currentAdmin != null) {
+                    auditLogService.logAction(
+                        currentAdmin.getId(),
+                        currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        currentAdmin.getEmail(),
+                        "CREATE_PRODUCT",
+                        "PRODUCT",
+                        createdProduct.getId(),
+                        createdProduct.getName(),
+                        "Product '" + createdProduct.getName() + "' was created by " + currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.CREATE,
+                        AuditLog.Severity.MEDIUM
+                    );
+                } else {
+                    // Fallback to default admin if no user found
+                    auditLogService.logAction(
+                        1L,
+                        "Admin",
+                        "admin@sunracing.com",
+                        "CREATE_PRODUCT",
+                        "PRODUCT",
+                        createdProduct.getId(),
+                        createdProduct.getName(),
+                        "Product '" + createdProduct.getName() + "' was created by Admin",
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.CREATE,
+                        AuditLog.Severity.MEDIUM
+                    );
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to log product creation audit: {}", e.getMessage());
+            }
             
             return ApiResponseUtil.created(createdProduct, "Product created successfully");
         } catch (Exception e) {
@@ -103,28 +145,50 @@ public class ProductController {
     public ResponseEntity<Map<String, Object>> updateProduct(@PathVariable Long id, @RequestBody Map<String, Object> requestBody, HttpServletRequest request) {
         try {
             
-            // Extract product and user information from request
+            // Extract product information from request
             Product product = extractProductFromRequest(requestBody);
-            String currentUser = extractCurrentUserFromRequest(requestBody);
             
             
             Product updatedProduct = productService.updateProduct(id, product);
             
             // Log the product update
-            auditLogService.logAction(
-                1L, // Default admin user ID
-                currentUser != null ? currentUser : "Admin", // Use current user or default
-                "admin@sunracing.com", // Default admin email
-                "UPDATE_PRODUCT",
-                "PRODUCT",
-                updatedProduct.getId(),
-                updatedProduct.getName(),
-                "Product '" + updatedProduct.getName() + "' was updated by " + (currentUser != null ? currentUser : "Admin"),
-                getClientIpAddress(request),
-                request.getHeader("User-Agent"),
-                AuditLog.ActionType.UPDATE,
-                AuditLog.Severity.MEDIUM
-            );
+            try {
+                UserEntity currentAdmin = getCurrentAdminUser(request);
+                if (currentAdmin != null) {
+                    auditLogService.logAction(
+                        currentAdmin.getId(),
+                        currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        currentAdmin.getEmail(),
+                        "UPDATE_PRODUCT",
+                        "PRODUCT",
+                        updatedProduct.getId(),
+                        updatedProduct.getName(),
+                        "Product '" + updatedProduct.getName() + "' was updated by " + currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.UPDATE,
+                        AuditLog.Severity.MEDIUM
+                    );
+                } else {
+                    // Fallback to default admin if no user found
+                    auditLogService.logAction(
+                        1L,
+                        "Admin",
+                        "admin@sunracing.com",
+                        "UPDATE_PRODUCT",
+                        "PRODUCT",
+                        updatedProduct.getId(),
+                        updatedProduct.getName(),
+                        "Product '" + updatedProduct.getName() + "' was updated by Admin",
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.UPDATE,
+                        AuditLog.Severity.MEDIUM
+                    );
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to log product update audit: {}", e.getMessage());
+            }
             
             
             Map<String, Object> response = new HashMap<>();
@@ -147,30 +211,49 @@ public class ProductController {
             Optional<Product> productToDelete = productService.getProductById(id);
             String productName = productToDelete.map(Product::getName).orElse("Unknown Product");
             
-            // Extract current user from request body (if provided)
-            String currentUser = null;
-            if (requestBody != null) {
-                currentUser = extractCurrentUserFromRequest(requestBody);
-            }
+            // Product deletion will be logged with current admin user from JWT token
             
             
             productService.deleteProduct(id);
             
             // Log the product deletion
-            auditLogService.logAction(
-                1L, // Default admin user ID
-                currentUser != null ? currentUser : "Admin", // Use current user or default
-                "admin@sunracing.com", // Default admin email
-                "DELETE_PRODUCT",
-                "PRODUCT",
-                id,
-                productName,
-                "Product '" + productName + "' was deleted by " + (currentUser != null ? currentUser : "Admin"),
-                getClientIpAddress(request),
-                request.getHeader("User-Agent"),
-                AuditLog.ActionType.DELETE,
-                AuditLog.Severity.HIGH
-            );
+            try {
+                UserEntity currentAdmin = getCurrentAdminUser(request);
+                if (currentAdmin != null) {
+                    auditLogService.logAction(
+                        currentAdmin.getId(),
+                        currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        currentAdmin.getEmail(),
+                        "DELETE_PRODUCT",
+                        "PRODUCT",
+                        id,
+                        productName,
+                        "Product '" + productName + "' was deleted by " + currentAdmin.getFirstName() + " " + currentAdmin.getLastName(),
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.DELETE,
+                        AuditLog.Severity.HIGH
+                    );
+                } else {
+                    // Fallback to default admin if no user found
+                    auditLogService.logAction(
+                        1L,
+                        "Admin",
+                        "admin@sunracing.com",
+                        "DELETE_PRODUCT",
+                        "PRODUCT",
+                        id,
+                        productName,
+                        "Product '" + productName + "' was deleted by Admin",
+                        getClientIpAddress(request),
+                        request.getHeader("User-Agent"),
+                        AuditLog.ActionType.DELETE,
+                        AuditLog.Severity.HIGH
+                    );
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to log product deletion audit: {}", e.getMessage());
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -467,10 +550,29 @@ public class ProductController {
         return product;
     }
     
-    // Helper method to extract current user from request body
-    private String extractCurrentUserFromRequest(Map<String, Object> requestBody) {
-        if (requestBody.containsKey("currentUser")) {
-            return (String) requestBody.get("currentUser");
+    
+    // Helper method to get current admin user from JWT token
+    private UserEntity getCurrentAdminUser(HttpServletRequest request) {
+        try {
+            String token = jwtAuthUtil.extractTokenFromRequest(request);
+            logger.info("🔍 ProductController - Token extracted: {}", token != null ? "YES" : "NO");
+            
+            if (token != null && jwtAuthUtil.isTokenValid(token)) {
+                String username = jwtService.extractUsername(token);
+                logger.info("🔍 ProductController - Username extracted: {}", username);
+                
+                UserEntity user = userRepository.findByUsername(username).orElse(null);
+                if (user != null) {
+                    logger.info("🔍 ProductController - User found: {} {} ({})", user.getFirstName(), user.getLastName(), user.getRole());
+                } else {
+                    logger.warn("🔍 ProductController - User not found for username: {}", username);
+                }
+                return user;
+            } else {
+                logger.warn("🔍 ProductController - Token is null or invalid");
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to extract admin user from token: {}", e.getMessage());
         }
         return null;
     }

@@ -45,7 +45,7 @@ public class Product {
     @Min(value = 0, message = "Stock quantity must not be negative")
     private Integer stockQuantity;
     
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
+    @Size(max = 2000, message = "Description must not exceed 2000 characters")
     private String description;
     
     @Size(max = 1000000, message = "Image URL must not exceed 1MB")

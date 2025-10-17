@@ -41,7 +41,7 @@ public class ProductEntity {
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity;
     
-    @Column(name = "description", length = 1000)
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     
     @Lob
