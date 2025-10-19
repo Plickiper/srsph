@@ -18,6 +18,8 @@ services:
       tags:
         - "sun-racing-spirit-backend:latest"
     container_name: sunracing-backend
+    env_file:
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://sunracingdb:3306/sun_racing_spirit_db
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}

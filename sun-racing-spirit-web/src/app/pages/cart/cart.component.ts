@@ -9,6 +9,7 @@ import { AuthService } from '../../services/auth.service';
 import { NotificationService } from '../../services/notification.service';
 import { CartItem, Product } from '../../models/product.model';
 import { BaseComponent } from '../../core/base-component';
+import { LoadingService } from '../../core/loading.service';
 
 @Component({
   selector: 'app-cart',
@@ -27,6 +28,8 @@ export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
   showVariantDropdown: { [key: string]: boolean } = {};
   // Inline SVG placeholder image (avoids 404 and extra asset)
   defaultProductImage = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240"><rect width="240" height="240" fill="%23f0f0f0"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23999" font-family="Arial" font-size="14">No Image</text></svg>';
+  // Loading states
+  loadingItems: { [key: string]: boolean } = {};
 
   constructor(
     private cartService: CartService,
@@ -34,7 +37,8 @@ export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private notificationService: NotificationService,
     private router: Router,
-    private title: Title
+    private title: Title,
+    private loadingService: LoadingService
   ) {
     super();
   }
@@ -93,6 +97,10 @@ export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
     
     // Get current variant
     const currentVariant = item.size || item.compatibility || 'Universal';
+    const itemKey = `${productId}-${currentVariant}`;
+    
+    // Set loading state
+    this.loadingItems[itemKey] = true;
     
     // Update quantity in cart service
     this.cartService.updateQuantity(productId, currentVariant, newQuantity);
@@ -103,11 +111,20 @@ export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
     } else if (newQuantity < item.quantity) {
       this.notificationService.success(`Quantity decreased to ${newQuantity}`);
     }
+    
+    // Clear loading state after a short delay
+    setTimeout(() => {
+      this.loadingItems[itemKey] = false;
+    }, 500);
   }
 
   removeItem(item: CartItem): void {
     const productId = item.product?.id ?? item.productId;
     const variant = item.size || 'Universal';
+    const itemKey = `${productId}-${variant}`;
+    
+    // Set loading state
+    this.loadingItems[itemKey] = true;
     
     // Optimistic UI: remove item immediately from local state
     this.cartItems = this.cartItems.filter(ci => !((ci.productId === productId) && ((ci.size || 'Universal') === variant)));
@@ -119,6 +136,7 @@ export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
         next: (updatedCart) => {
           // Preserve product snapshots to avoid flicker while images reload
           this.cartService.applyServerCartPreserveProduct(updatedCart);
+          this.loadingItems[itemKey] = false;
         },
         error: (error) => {
           console.error('Error removing cart item (auth):', error);
@@ -134,6 +152,7 @@ export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
             // For other errors, revert the optimistic update
             this.cartService.loadAppropriateCart();
           }
+          this.loadingItems[itemKey] = false;
         }
       });
     } else {
@@ -141,6 +160,7 @@ export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
       if (productId != null) {
         this.cartService.removeFromCart(productId, variant);
       }
+      this.loadingItems[itemKey] = false;
     }
   }
 
@@ -304,6 +324,14 @@ export class CartComponent extends BaseComponent implements OnInit, OnDestroy {
     const productId = item.product?.id ?? item.productId ?? 'unknown';
     const sizeKey = item.size || 'Universal';
     return `${productId}-${sizeKey}`;
+  }
+
+  isItemLoading(item: CartItem): boolean {
+    const productId = item.product?.id ?? item.productId;
+    if (productId == null) return false;
+    const variant = item.size || item.compatibility || 'Universal';
+    const itemKey = `${productId}-${variant}`;
+    return this.loadingItems[itemKey] || false;
   }
 
   @HostListener('document:click', ['$event'])

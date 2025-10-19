@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { NotificationService } from '../../services/notification.service';
 import { CartService } from '../../services/cart.service';
+import { LoadingService } from '../../core/loading.service';
 
 @Component({
   selector: 'app-orders',
@@ -34,6 +35,7 @@ export class OrdersComponent implements OnInit {
   
   // Track rated orders
   ratedOrders = new Set<number>();
+  private readonly RATED_ORDERS_KEY = 'rated_orders';
   
   // Cancellation modal state
   showCancelModalFlag = false;
@@ -44,6 +46,12 @@ export class OrdersComponent implements OnInit {
   
   // Shared selected order for both rating and cancellation modals
   selectedOrder: any = null;
+  
+  // Loading states
+  isLoadingOrders = false;
+  isSubmittingRating = false;
+  isCancellingOrder = false;
+  isLoadingRatedStatus = false;
 
   constructor(
     private ordersService: OrdersService, 
@@ -51,7 +59,8 @@ export class OrdersComponent implements OnInit {
     private http: HttpClient,
     private notificationService: NotificationService,
     private cartService: CartService,
-    private router: Router
+    private router: Router,
+    private loadingService: LoadingService
   ) {}
 
   hasVariants(product: any): boolean {
@@ -66,19 +75,37 @@ export class OrdersComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Load persisted rated orders from localStorage first
+    this.loadPersistedRatedOrders();
+    this.loadOrders();
+  }
+
+  loadOrders(): void {
     const u: any = this.authService.getCurrentUser();
     if (!u) return;
+    
+    this.isLoadingOrders = true;
+    this.isLoadingRatedStatus = true;
+    this.loadingService.show();
+    
     this.ordersService.getMyOrders(u.id).subscribe({
       next: (list) => {
         this.orders = Array.isArray(list) ? list : [];
-        // Load rated orders after orders are loaded with a small delay
-        setTimeout(() => {
-          this.loadRatedOrders();
-        }, 200);
+        // Load rated orders immediately after orders are loaded
+        this.loadRatedOrders().then(() => {
+          this.isLoadingRatedStatus = false;
+        }).catch(() => {
+          this.isLoadingRatedStatus = false;
+        });
       },
       error: (error) => {
         console.error('Error loading orders:', error);
         this.orders = [];
+        this.isLoadingRatedStatus = false;
+      },
+      complete: () => {
+        this.isLoadingOrders = false;
+        this.loadingService.hide();
       }
     });
   }
@@ -254,6 +281,11 @@ export class OrdersComponent implements OnInit {
       return;
     }
 
+    if (this.isSubmittingRating) return;
+
+    this.isSubmittingRating = true;
+    this.loadingService.show();
+
     // Submit one rating per product (not per variant) to avoid unique constraint violation
     const ratingPromises: Promise<any>[] = [];
     
@@ -292,7 +324,9 @@ export class OrdersComponent implements OnInit {
     Promise.all(ratingPromises.filter((p: Promise<any> | undefined) => p)).then(() => {
       // Mark this order as rated
       this.ratedOrders.add(this.selectedOrder.id);
+      this.persistRatedOrders();
       this.closeRatingModal();
+      this.notificationService.success('Rating submitted successfully!');
     }).catch((error) => {
       console.error('Error submitting ratings:', error);
       
@@ -301,31 +335,90 @@ export class OrdersComponent implements OnInit {
         if (error.error.message.includes('already rated')) {
           // Mark as rated if backend says it's already rated
           this.ratedOrders.add(this.selectedOrder.id);
+          this.persistRatedOrders();
+          this.notificationService.info('Order already rated');
+        } else {
+          this.notificationService.error('Failed to submit rating. Please try again.');
         }
+      } else {
+        this.notificationService.error('Failed to submit rating. Please try again.');
       }
+    }).finally(() => {
+      this.isSubmittingRating = false;
+      this.loadingService.hide();
     });
   }
 
-  loadRatedOrders(): void {
-    // Ensure orders is an array before filtering
-    if (!Array.isArray(this.orders)) {
-      console.log('Orders is not an array:', this.orders);
-      return;
-    }
-    
-    // Load existing ratings for delivered orders
-    const deliveredOrders = this.orders.filter(order => order.status === 'DELIVERED');
-    const currentUserId = this.authService.getCurrentUser()?.id;
-    
-    if (!currentUserId || deliveredOrders.length === 0) {
-      console.log('No delivered orders or user ID not found');
-      return;
-    }
-    
-    console.log('Loading ratings for', deliveredOrders.length, 'delivered orders');
-    
-    deliveredOrders.forEach(order => {
-      this.checkIfRated(order, currentUserId);
+  loadRatedOrders(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Ensure orders is an array before filtering
+      if (!Array.isArray(this.orders)) {
+        console.log('Orders is not an array:', this.orders);
+        resolve();
+        return;
+      }
+      
+      // Load existing ratings for delivered orders
+      const deliveredOrders = this.orders.filter(order => order.status === 'DELIVERED');
+      const currentUserId = this.authService.getCurrentUser()?.id;
+      
+      if (!currentUserId || deliveredOrders.length === 0) {
+        console.log('No delivered orders or user ID not found');
+        resolve();
+        return;
+      }
+      
+      console.log('Loading ratings for', deliveredOrders.length, 'delivered orders');
+      
+      // Use Promise.all to wait for all rating checks to complete
+      const ratingChecks = deliveredOrders.map(order => this.checkIfRatedPromise(order, currentUserId));
+      
+      Promise.all(ratingChecks)
+        .then(() => {
+          console.log('All rating checks completed');
+          resolve();
+        })
+        .catch((error) => {
+          console.error('Error checking ratings:', error);
+          reject(error);
+        });
+    });
+  }
+
+  checkIfRatedPromise(order: any, userId: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!order.items || order.items.length === 0) {
+        resolve();
+        return;
+      }
+      
+      // Check any product in the order to decide if user already has a rating for this order
+      const productIds: number[] = (order.items || []).map((it: any) => it.productId || (it.product && it.product.id)).filter((id: any) => !!id);
+      if (productIds.length === 0) {
+        resolve();
+        return;
+      }
+      
+      // Query the first product; if found a rating for this order and user, mark as rated (best-effort)
+      const productId = productIds[0];
+      this.http.get<any[]>(`http://localhost:8080/api/ratings/product/${productId}`).subscribe({
+        next: (ratings) => {
+          // Check if current user has rated this product from this order
+          const userRating = ratings.find(rating => {
+            return rating.orderId === order.id && rating.userId === userId;
+          });
+          
+          if (userRating) {
+            this.ratedOrders.add(order.id);
+            this.persistRatedOrders();
+          }
+          resolve();
+        },
+        error: (error) => {
+          console.error('Error checking rating status for order', order.id, ':', error);
+          reject(error);
+        }
+      });
     });
   }
 
@@ -348,6 +441,7 @@ export class OrdersComponent implements OnInit {
         
         if (userRating) {
           this.ratedOrders.add(order.id);
+          this.persistRatedOrders();
         }
       },
       error: (error) => {
@@ -357,34 +451,48 @@ export class OrdersComponent implements OnInit {
   }
 
   isOrderRated(orderId: number): boolean {
+    // If we're still loading the rated status, assume it's not rated to prevent premature clicking
+    if (this.isLoadingRatedStatus) {
+      return false;
+    }
     return this.ratedOrders.has(orderId);
+  }
+
+  private loadPersistedRatedOrders(): void {
+    try {
+      const persisted = localStorage.getItem(this.RATED_ORDERS_KEY);
+      if (persisted) {
+        const orderIds = JSON.parse(persisted);
+        this.ratedOrders = new Set(orderIds);
+        console.log('Loaded persisted rated orders:', orderIds);
+      }
+    } catch (error) {
+      console.error('Error loading persisted rated orders:', error);
+    }
+  }
+
+  private persistRatedOrders(): void {
+    try {
+      const orderIds = Array.from(this.ratedOrders);
+      localStorage.setItem(this.RATED_ORDERS_KEY, JSON.stringify(orderIds));
+      console.log('Persisted rated orders:', orderIds);
+    } catch (error) {
+      console.error('Error persisting rated orders:', error);
+    }
   }
 
   // Method to clear rating state (useful for testing)
   clearRatingState(): void {
     this.ratedOrders.clear();
+    localStorage.removeItem(this.RATED_ORDERS_KEY);
     console.log('Rating state cleared');
   }
 
   // Method to refresh orders and rating state
   refreshOrders(): void {
-    const u: any = this.authService.getCurrentUser();
-    if (!u) return;
-    
-    this.ordersService.getMyOrders(u.id).subscribe({
-      next: (list) => {
-        this.orders = Array.isArray(list) ? list : [];
-        // Clear existing rating state and reload
-        this.ratedOrders.clear();
-        setTimeout(() => {
-          this.loadRatedOrders();
-        }, 100);
-      },
-      error: (error) => {
-        console.error('Error refreshing orders:', error);
-        this.orders = [];
-      }
-    });
+    // Clear existing rated orders before reloading
+    this.ratedOrders.clear();
+    this.loadOrders();
   }
 
   // Cancellation methods
@@ -460,7 +568,7 @@ export class OrdersComponent implements OnInit {
   }
 
   confirmCancellation(): void {
-    if (!this.selectedOrder || !this.selectedCancellationReason) {
+    if (!this.selectedOrder || !this.selectedCancellationReason || this.isCancellingOrder) {
       return;
     }
 
@@ -472,6 +580,9 @@ export class OrdersComponent implements OnInit {
       orderId: this.selectedOrder.id,
       reason: reason
     };
+
+    this.isCancellingOrder = true;
+    this.loadingService.show();
 
     this.http.post<any>('http://localhost:8080/api/orders/cancel', cancelRequest).subscribe({
       next: (response) => {
@@ -493,6 +604,10 @@ export class OrdersComponent implements OnInit {
       error: (error) => {
         console.error('Error cancelling order:', error);
         this.notificationService.error('Failed to cancel order. Please try again.');
+      },
+      complete: () => {
+        this.isCancellingOrder = false;
+        this.loadingService.hide();
       }
     });
   }

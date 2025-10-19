@@ -75,21 +75,31 @@
             </div>
           </div>
 
-          <div class="item-quantity">
-            <button class="quantity-btn" (click)="updateQuantity(item, item.quantity - 1)">-</button>
-            <span class="quantity">{{ item.quantity }}</span>
-            <button class="quantity-btn" (click)="updateQuantity(item, item.quantity + 1)">+</button>
+          <div class="item-quantity" [class.loading]="isItemLoading(item)">
+            <button class="quantity-btn" 
+                    [disabled]="isItemLoading(item)"
+                    (click)="updateQuantity(item, item.quantity - 1)">-</button>
+            <span class="quantity">
+              <span *ngIf="!isItemLoading(item)">{{ item.quantity }}</span>
+              <span *ngIf="isItemLoading(item)" class="loading-spinner-small"></span>
+            </span>
+            <button class="quantity-btn" 
+                    [disabled]="isItemLoading(item)"
+                    (click)="updateQuantity(item, item.quantity + 1)">+</button>
           </div>
 
           <div class="item-total">
             ₱{{ ((item.product && item.product.price) || item.price) * item.quantity | number:'1.0-0' }}
           </div>
 
-          <button class="remove-btn" (click)="removeItem(item)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="remove-btn" 
+                  [disabled]="isItemLoading(item)"
+                  (click)="removeItem(item)">
+            <svg *ngIf="!isItemLoading(item)" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3,6 5,6 21,6"></polyline>
               <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
             </svg>
+            <span *ngIf="isItemLoading(item)" class="loading-spinner-small"></span>
           </button>
         </div>
       </div>

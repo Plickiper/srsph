@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { CartItem, User } from '../../models/product.model';
 import { FormsModule } from '@angular/forms';
 import { OrdersService } from '../../services/orders.service';
+import { LoadingService } from '../../core/loading.service';
 
 @Component({
   selector: 'app-checkout',
@@ -33,12 +34,15 @@ export class CheckoutComponent implements OnInit {
   };
   // Payment method (no default selection)
   paymentMethod: 'COD' | 'GCASH' | null = null;
+  // Loading state
+  isPlacingOrder = false;
 
   constructor(
     private cartService: CartService,
     private authService: AuthService,
     private router: Router,
-    private ordersService: OrdersService
+    private ordersService: OrdersService,
+    private loadingService: LoadingService
   ) {}
 
   hasVariants(product: any): boolean {
@@ -109,7 +113,11 @@ export class CheckoutComponent implements OnInit {
 
   // Create order then navigate to My Orders
   placeOrder(): void {
-    if (!this.user || !this.paymentMethod) return;
+    if (!this.user || !this.paymentMethod || this.isPlacingOrder) return;
+    
+    // Set loading state
+    this.isPlacingOrder = true;
+    this.loadingService.show();
     
     // Map items with correct field names for backend
     const items = this.items.map(i => ({
@@ -158,6 +166,11 @@ export class CheckoutComponent implements OnInit {
         console.error('Error creating order:', error);
         // Show error message to user
         alert('Error creating order. Please try again.');
+      },
+      complete: () => {
+        // Always hide loading state when request completes
+        this.isPlacingOrder = false;
+        this.loadingService.hide();
       }
     });
   }
