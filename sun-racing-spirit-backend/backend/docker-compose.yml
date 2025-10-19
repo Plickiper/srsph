@@ -4,7 +4,7 @@ services:
     container_name: sunracing-mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: sun_racing_spirit_db
+      MYSQL_DATABASE: ${MYSQL_DATABASE_NAME}
     ports:
       - "3306:3306"
     volumes:
@@ -21,7 +21,7 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://sunracingdb:3306/sun_racing_spirit_db
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME}
