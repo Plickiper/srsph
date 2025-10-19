@@ -1,0 +1,38 @@
+services:
+  sunracingdb:
+    image: mysql:8.0
+    container_name: sunracing-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ***
+      MYSQL_DATABASE: sun_racing_spirit_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./sunracing-database/db:/var/lib/mysql
+    networks:
+      - sunracingnetwork
+
+  sunracing-backend:
+    build: 
+      context: .
+      tags:
+        - "sun-racing-spirit-backend:latest"
+    container_name: sunracing-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://sunracingdb:3306/sun_racing_spirit_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ***
+      APP_UPLOAD_DIR_PRODUCT_IMAGES: /app/upload-dir/product-images
+      APP_UPLOAD_DIR_REVIEW_IMAGES: /app/upload-dir/review-images
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./upload-dir:/app/upload-dir
+    depends_on:
+      - sunracingdb
+    networks:
+      - sunracingnetwork
+
+networks:
+  sunracingnetwork:
+    driver: bridge

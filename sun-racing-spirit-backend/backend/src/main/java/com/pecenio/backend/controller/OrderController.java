@@ -227,7 +227,7 @@ public class OrderController {
             // Save order first to get ID
             OrderEntity savedOrder = orderRepository.save(order);
             
-            // Create order items
+            // Create order items and update sold count
             for (OrderRequest.OrderItemRequest item : orderRequest.getItems()) {
                 ProductEntity product = productRepository.findById(item.getProductId())
                         .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProductId()));
@@ -245,6 +245,8 @@ public class OrderController {
                 
                 // Save the order item
                 orderItemRepository.save(orderItem);
+                
+                // Note: Sold count is updated only when delivery proof is uploaded
             }
             
             // Re-fetch the order with items to return complete data
@@ -442,10 +444,13 @@ public class OrderController {
                             product.setStockQuantity(newStock);
                         }
                         
-                        // Update sold counter (always update regardless of variant)
+                        // Update sold counter when delivery proof is uploaded
                         int currentSoldCount = product.getSoldCount();
                         int newSoldCount = currentSoldCount + orderedQuantity;
                         product.setSoldCount(newSoldCount);
+                        
+                        logger.info("Updated sold count for product {}: {} -> {}", 
+                            product.getName(), currentSoldCount, newSoldCount);
                         
                         // Save updated product
                         productRepository.save(product);

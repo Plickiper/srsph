@@ -1,6 +1,7 @@
 package com.pecenio.backend.controller;
 
 import com.pecenio.backend.util.ApiResponseUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,8 @@ import java.util.UUID;
 @RequestMapping("/api/products")
 public class ProductImageController {
 
-    private static final String UPLOAD_DIR = "upload-dir/product-images";
+    @Value("${app.upload-dir.product-images:upload-dir/product-images}")
+    private String uploadDir;
 
     @PostMapping("/upload-image")
     public ResponseEntity<Map<String, Object>> uploadProductImage(@RequestParam("file") MultipartFile file) {
@@ -51,7 +53,7 @@ public class ProductImageController {
             }
 
             // Create upload directory if it doesn't exist
-            Path uploadPath = Paths.get(UPLOAD_DIR);
+            Path uploadPath = Paths.get(uploadDir);
             System.out.println("Upload path: " + uploadPath.toAbsolutePath());
             System.out.println("Directory exists: " + Files.exists(uploadPath));
             
@@ -101,7 +103,7 @@ public class ProductImageController {
     @GetMapping("/images/{filename}")
     public ResponseEntity<org.springframework.core.io.Resource> serveProductImage(@PathVariable String filename) {
         try {
-            Path filePath = Paths.get(UPLOAD_DIR).resolve(filename).normalize();
+            Path filePath = Paths.get(uploadDir).resolve(filename).normalize();
             org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(filePath.toUri());
             
             if (resource.exists() && resource.isReadable()) {

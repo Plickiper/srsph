@@ -2,6 +2,9 @@ package com.pecenio.backend.controller;
 
 import com.pecenio.backend.dto.RatingRequest;
 import com.pecenio.backend.util.ApiResponseUtil;
+import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.pecenio.datamodel.entity.RatingEntity;
 import com.pecenio.datamodel.entity.UserEntity;
 import com.pecenio.datamodel.entity.ProductEntity;
@@ -26,7 +29,10 @@ import java.io.IOException;
 @RequestMapping("/api/ratings")
 public class RatingController {
 
-    private static final String UPLOAD_DIR = "upload-dir/review-images";
+    private static final Logger logger = LoggerFactory.getLogger(RatingController.class);
+
+    @Value("${app.upload-dir.review-images:upload-dir/review-images}")
+    private String uploadDir;
 
     @Autowired
     private RatingRepository ratingRepository;
@@ -79,7 +85,7 @@ public class RatingController {
             if (file != null && !file.isEmpty()) {
                 try {
                     // Create upload directory if it doesn't exist
-                    Path uploadPath = Paths.get(UPLOAD_DIR);
+                    Path uploadPath = Paths.get(uploadDir);
                     if (!Files.exists(uploadPath)) {
                         Files.createDirectories(uploadPath);
                     }
@@ -124,6 +130,9 @@ public class RatingController {
 
             // Update product rating statistics
             updateProductRatingStats(product);
+            
+            logger.info("Updated rating stats for product {}: rating={}, review_count={}", 
+                product.getName(), product.getRating(), product.getReviewCount());
 
             response.put("success", true);
             response.put("message", "Rating submitted successfully");
@@ -284,6 +293,7 @@ public class RatingController {
             int updatedCount = 0;
             
             for (ProductEntity product : allProducts) {
+                // Update rating statistics for each product
                 updateProductRatingStats(product);
                 updatedCount++;
             }
@@ -297,12 +307,72 @@ public class RatingController {
             return ResponseEntity.status(500).body(response);
         }
     }
+    
+    // Endpoint to fix data inconsistency (products with reviews but 0 sold count)
+    @PostMapping("/fix-data-inconsistency")
+    public ResponseEntity<Map<String, Object>> fixDataInconsistency() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            // Get all products with reviews but 0 sold count
+            List<ProductEntity> inconsistentProducts = productRepository.findAll().stream()
+                .filter(p -> p.getReviewCount() > 0 && p.getSoldCount() == 0)
+                .collect(Collectors.toList());
+            
+            int fixedCount = 0;
+            for (ProductEntity product : inconsistentProducts) {
+                // Reset review count and rating to 0 since they can't have reviews without sales
+                product.setReviewCount(0);
+                product.setRating(java.math.BigDecimal.ZERO);
+                productRepository.save(product);
+                fixedCount++;
+            }
+            
+            response.put("success", true);
+            response.put("message", "Fixed " + fixedCount + " products with inconsistent data");
+            response.put("fixed_products", fixedCount);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Failed to fix data inconsistency: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    // Endpoint to get data inconsistency report
+    @GetMapping("/inconsistency-report")
+    public ResponseEntity<Map<String, Object>> getInconsistencyReport() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            // Get all products with reviews but 0 sold count
+            List<Map<String, Object>> inconsistentProducts = productRepository.findAll().stream()
+                .filter(p -> p.getReviewCount() > 0 && p.getSoldCount() == 0)
+                .map(p -> {
+                    Map<String, Object> productInfo = new HashMap<>();
+                    productInfo.put("id", p.getId());
+                    productInfo.put("name", p.getName());
+                    productInfo.put("sold_count", p.getSoldCount());
+                    productInfo.put("review_count", p.getReviewCount());
+                    productInfo.put("rating", p.getRating());
+                    return productInfo;
+                })
+                .collect(Collectors.toList());
+            
+            response.put("success", true);
+            response.put("inconsistent_products", inconsistentProducts);
+            response.put("count", inconsistentProducts.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Failed to get inconsistency report: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
 
     // Serve review images
     @GetMapping("/uploads/{filename}")
     public ResponseEntity<org.springframework.core.io.Resource> serveReviewImage(@PathVariable String filename) {
         try {
-            Path filePath = Paths.get(UPLOAD_DIR).resolve(filename).normalize();
+            Path filePath = Paths.get(uploadDir).resolve(filename).normalize();
             org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(filePath.toUri());
             
             if (resource.exists() && resource.isReadable()) {
