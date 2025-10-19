@@ -21,7 +21,10 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://sunracingdb:3306/sun_racing_spirit_db
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ***
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-***}
+      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-***}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-***}
       APP_UPLOAD_DIR_PRODUCT_IMAGES: /app/upload-dir/product-images
       APP_UPLOAD_DIR_REVIEW_IMAGES: /app/upload-dir/review-images
     ports:
