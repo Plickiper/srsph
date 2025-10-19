@@ -3,7 +3,7 @@ services:
     image: mysql:8.0
     container_name: sunracing-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-defaultpassword}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: sun_racing_spirit_db
     ports:
       - "3306:3306"
@@ -21,10 +21,10 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://sunracingdb:3306/sun_racing_spirit_db
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-***}
-      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
-      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-***}
-      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-***}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL}
       APP_UPLOAD_DIR_PRODUCT_IMAGES: /app/upload-dir/product-images
       APP_UPLOAD_DIR_REVIEW_IMAGES: /app/upload-dir/review-images
     ports:
