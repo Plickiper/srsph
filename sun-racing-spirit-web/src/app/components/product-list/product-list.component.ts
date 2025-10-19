@@ -30,7 +30,7 @@ import { ProductCardComponent } from '../product-card/product-card.component';
       </div>
 
       <!-- Product Grid -->
-      <div class="product-grid" *ngIf="!loading && products.length > 0">
+      <div class="product-grid" [class.centered]="centered" *ngIf="!loading && products.length > 0">
         <app-product-card
           *ngFor="let product of products; trackBy: trackByProductId"
           [product]="product"
@@ -108,6 +108,21 @@ import { ProductCardComponent } from '../product-card/product-card.component';
       justify-content: start;
     }
 
+    .product-grid.centered {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--spacing-md);
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--spacing-lg) 0;
+    }
+    
+    .product-grid.centered app-product-card {
+      flex: 0 0 auto;
+      width: 180px;
+    }
+
     .load-more-container {
       display: flex;
       justify-content: center;
@@ -164,6 +179,7 @@ export class ProductListComponent implements OnInit {
   @Input() products: Product[] = [];
   @Input() loading = false;
   @Input() hasMore = false;
+  @Input() centered = false;
   @Output() loadMore = new EventEmitter<void>();
   @Output() clearFilters = new EventEmitter<void>();
 

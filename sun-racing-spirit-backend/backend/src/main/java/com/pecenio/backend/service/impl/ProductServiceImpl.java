@@ -137,6 +137,12 @@ public class ProductServiceImpl implements ProductService {
     public List<Product> getNewArrivals() {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         List<ProductEntity> entities = productRepository.findNewArrivals(thirtyDaysAgo);
+        
+        // Limit to 5 most recent products (FIFO - First In, First Out)
+        if (entities.size() > 5) {
+            entities = entities.subList(0, 5);
+        }
+        
         return entities.stream()
                 .map(ProductEntity::toBusinessModel)
                 .collect(Collectors.toList());

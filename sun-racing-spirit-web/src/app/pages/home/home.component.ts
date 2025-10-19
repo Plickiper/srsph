@@ -44,12 +44,6 @@ import { ProductListComponent } from '../../components/product-list/product-list
         <div class="container">
           <div class="section-header">
             <h2 class="section-title">Featured Products</h2>
-            <a routerLink="/products" class="view-all-link">
-              View All Products
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M5 12h14M12 5l7 7-7 7"></path>
-              </svg>
-            </a>
           </div>
           <div *ngIf="loading" class="loading-state">
             <div class="loading-spinner"></div>
@@ -67,7 +61,16 @@ import { ProductListComponent } from '../../components/product-list/product-list
             *ngIf="!loading && featuredProducts.length > 0"
             [products]="featuredProducts"
             [loading]="loading"
+            [centered]="true"
           ></app-product-list>
+          <div class="view-all-container" *ngIf="!loading && featuredProducts.length > 0">
+            <a routerLink="/products" class="view-all-link">
+              View All Products
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"></path>
+              </svg>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -76,12 +79,6 @@ import { ProductListComponent } from '../../components/product-list/product-list
         <div class="container">
           <div class="section-header">
             <h2 class="section-title">New Arrivals</h2>
-            <a routerLink="/products" class="view-all-link">
-              View All New
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M5 12h14M12 5l7 7-7 7"></path>
-              </svg>
-            </a>
           </div>
           <div *ngIf="loading" class="loading-state">
             <div class="loading-spinner"></div>
@@ -99,6 +96,7 @@ import { ProductListComponent } from '../../components/product-list/product-list
             *ngIf="!loading && newArrivals.length > 0"
             [products]="newArrivals"
             [loading]="loading"
+            [centered]="true"
           ></app-product-list>
         </div>
       </section>
@@ -235,11 +233,26 @@ import { ProductListComponent } from '../../components/product-list/product-list
       padding: var(--spacing-3xl) 0;
     }
 
+
     .section-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       margin-bottom: var(--spacing-2xl);
+      gap: var(--spacing-md);
+    }
+
+    .new-arrivals-section .section-header {
+      justify-content: center;
+    }
+
+    .featured-section .section-header {
+      justify-content: center;
+    }
+    
+    .view-all-container {
+      display: flex;
+      justify-content: center;
+      margin-top: var(--spacing-lg);
     }
 
     .view-all-link {

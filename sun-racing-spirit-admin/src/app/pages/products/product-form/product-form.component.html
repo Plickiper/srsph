@@ -433,6 +433,9 @@
           <div class="toggle-info">
             <h4>{{ product.isFeatured ? 'Featured Product' : 'Not Featured' }}</h4>
             <p>{{ product.isFeatured ? 'Product will appear in the featured section on the homepage.' : 'Product will not be highlighted on the homepage.' }}</p>
+            <p class="featured-count" *ngIf="featuredCount !== null">
+              <span [class.warning]="featuredCount >= 5">{{ featuredCount }}/5 featured products</span>
+            </p>
           </div>
         </div>
       </div>

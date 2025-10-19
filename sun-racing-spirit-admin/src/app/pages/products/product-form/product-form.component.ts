@@ -54,6 +54,9 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   // Category dropdown state
   isDropdownOpen = false;
   
+  // Featured products count
+  featuredCount: number | null = null;
+  
   @HostListener('window:scroll')
   onWindowScroll() {
     // Close dropdown when user scrolls
@@ -155,6 +158,9 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       this.loadProduct(parseInt(productId));
     }
     
+    // Load featured products count
+    this.loadFeaturedCount();
+    
     // Initialize auto-resize for description textarea
     setTimeout(() => {
       const textarea = document.getElementById('description') as HTMLTextAreaElement;
@@ -167,6 +173,18 @@ export class ProductFormComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.filePreviewUrls.forEach(url => URL.revokeObjectURL(url));
     this.filePreviewUrls.clear();
+  }
+
+  loadFeaturedCount(): void {
+    this.productService.getFeaturedProducts().subscribe({
+      next: (products) => {
+        this.featuredCount = products.length;
+      },
+      error: (error) => {
+        console.error('Error loading featured products count:', error);
+        this.featuredCount = 0;
+      }
+    });
   }
 
   loadProduct(id: number): void {
@@ -250,11 +268,26 @@ export class ProductFormComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate description length
-    if (this.product.description && this.product.description.length > 2000) {
-      this.errorMessage = 'Description must not exceed 2000 characters';
-      return;
+  // Validate description length
+  if (this.product.description && this.product.description.length > 2000) {
+    this.errorMessage = 'Description must not exceed 2000 characters';
+    return;
+  }
+
+  // Validate featured products limit
+  if (this.product.isFeatured) {
+    const featuredProducts = await this.productService.getFeaturedProducts().toPromise();
+    if (featuredProducts) {
+      // Check if we're trying to add a new featured product or make an existing product featured
+      const isCurrentlyFeatured = this.isEditMode && featuredProducts.some(p => p.id === this.product.id);
+      const currentFeaturedCount = featuredProducts.length;
+      
+      if (!isCurrentlyFeatured && currentFeaturedCount >= 5) {
+        this.errorMessage = 'Cannot add more than 5 featured products. Please remove a featured product first.';
+        return;
+      }
     }
+  }
 
     if (!this.useVariantPricing && this.product.price <= 0) {
       this.errorMessage = 'Price must be greater than 0';

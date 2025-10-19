@@ -2,30 +2,41 @@
   <div class="container">
 
     <!-- Full-width Delivery Address banner -->
-    <div class="address-section address-banner">
+    <div class="address-section address-banner" [class.incomplete]="!isProfileComplete() || !isDeliveryInfoComplete()">
           <div class="section-header">
             <div class="header-left">
               <span class="pin">📍</span>
               <h2>Delivery Address</h2>
+              <span *ngIf="!isProfileComplete() || !isDeliveryInfoComplete()" class="warning-badge">⚠️ Incomplete</span>
             </div>
             <div class="header-right">
-              <span class="badge">Default</span>
-              <a class="link" routerLink="/profile">Change</a>
+              <span class="badge" [class.incomplete]="!isProfileComplete() || !isDeliveryInfoComplete()">
+                {{ isProfileComplete() && isDeliveryInfoComplete() ? 'Complete' : 'Incomplete' }}
+              </span>
+              <a class="link" routerLink="/profile">Update Profile</a>
             </div>
           </div>
           <div class="address-body">
             <div class="address-grid">
               <div class="left">
                 <div class="recipient-line">
-                  <span class="name">{{ delivery.fullName || (user?.firstName + ' ' + user?.lastName) }}</span>
-                  <span class="phone">{{ delivery.phoneNumber }}</span>
+                  <span class="name">{{ delivery.fullName || (user?.firstName + ' ' + user?.lastName) || 'Not provided' }}</span>
+                  <span class="phone">{{ delivery.phoneNumber || 'Not provided' }}</span>
                 </div>
               </div>
               <div class="right">
                 <div class="full-address">
-                  {{ delivery.address }}, {{ delivery.city }}, {{ delivery.state }}, {{ delivery.country }} {{ delivery.postalCode }}
+                  {{ delivery.address || 'Not provided' }}, {{ delivery.city || 'Not provided' }}, {{ delivery.state || 'Not provided' }}, {{ delivery.country || 'Not provided' }} {{ delivery.postalCode || 'Not provided' }}
                 </div>
               </div>
+            </div>
+            
+            <!-- Profile completion warnings -->
+            <div *ngIf="!isProfileComplete()" class="warning-message">
+              <strong>⚠️ Profile Incomplete:</strong> Please update your profile to checkout the product.
+            </div>
+            <div *ngIf="!isDeliveryInfoComplete()" class="warning-message">
+              <strong>⚠️ Delivery Info Incomplete:</strong> Please update your profile to checkout the product.
             </div>
           </div>
     </div>
@@ -78,8 +89,15 @@
         <ng-template #ship><span>₱{{ shippingFee | number:'1.0-0' }}</span></ng-template>
         <div class="row total"><span>Total</span><span>₱{{ grandTotal | number:'1.0-0' }}</span></div>
 
-        <button class="btn btn-primary" [attr.aria-disabled]="!paymentMethod || isPlacingOrder" [disabled]="!paymentMethod || isPlacingOrder" (click)="placeOrder()">
-          <span *ngIf="!isPlacingOrder">Place Order</span>
+        <button class="btn btn-primary" 
+                [attr.aria-disabled]="!canPlaceOrder()" 
+                [disabled]="!canPlaceOrder()" 
+                (click)="placeOrder()">
+          <span *ngIf="!isPlacingOrder">
+            <span *ngIf="!isProfileComplete() || !isDeliveryInfoComplete()">Complete Profile to Order</span>
+            <span *ngIf="isProfileComplete() && isDeliveryInfoComplete() && !paymentMethod">Select Payment Method</span>
+            <span *ngIf="canPlaceOrder()">Place Order</span>
+          </span>
           <span *ngIf="isPlacingOrder" class="loading-content">
             <span class="spinner-small"></span>
             Processing Order...
@@ -90,3 +108,4 @@
     </div>
   </div>
 </div>
+

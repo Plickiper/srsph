@@ -1372,3 +1372,15 @@ input:checked + .slider:before {
   .product-row { flex-direction: column; gap: 10px; align-items: flex-start; }
   .product-image-wrapper { width: 70px; height: 70px; }
 }
+
+// Featured count styling
+.featured-count {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.featured-count .warning {
+  color: #f59e0b;
+  font-weight: 600;
+}
