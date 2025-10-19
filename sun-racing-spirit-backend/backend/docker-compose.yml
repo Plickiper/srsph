@@ -3,7 +3,7 @@ services:
     image: mysql:8.0
     container_name: sunracing-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ***
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-defaultpassword}
       MYSQL_DATABASE: sun_racing_spirit_db
     ports:
       - "3306:3306"
