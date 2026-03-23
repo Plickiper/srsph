@@ -15,8 +15,8 @@ import java.nio.file.Paths;
 @RequestMapping("/api/static")
 public class StaticFileController {
 
-    private static final String WAYBILL_DIR = "backend/uploads/waybills";
-    private static final String DELIVERY_PROOF_DIR = "backend/uploads/delivery-proofs";
+    private static final String WAYBILL_DIR = "/app/upload-dir/waybills";
+    private static final String DELIVERY_PROOF_DIR = "/app/upload-dir/proofs";
 
     @GetMapping("/waybills/{filename}")
     public ResponseEntity<Resource> serveWaybillImage(@PathVariable String filename) {

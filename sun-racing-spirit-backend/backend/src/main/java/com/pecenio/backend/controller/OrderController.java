@@ -282,7 +282,7 @@ public class OrderController {
             }
             
             // Create upload directory if it doesn't exist
-            String uploadDir = "backend/uploads/waybills";
+            String uploadDir = "/app/upload-dir/waybills";
             File directory = new File(uploadDir);
             if (!directory.exists()) {
                 directory.mkdirs();
@@ -362,7 +362,7 @@ public class OrderController {
             }
             
             // Create upload directory if it doesn't exist
-            String uploadDir = "backend/uploads/delivery-proofs";
+            String uploadDir = "/app/upload-dir/proofs";
             File directory = new File(uploadDir);
             if (!directory.exists()) {
                 directory.mkdirs();
