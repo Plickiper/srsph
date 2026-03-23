@@ -59,6 +59,7 @@ graph TD
 * **Spring Security & JWT:** For stateless, role-based authentication and secure endpoints.
 * **MySQL 8.0:** Relational database for persistent storage (Users, Products, Orders, Carts).
 * **Lombok:** Boilerplate and code reduction.
+* **Postman**: Used for endpoint testing, debugging, and request validation.
 
 **Frontend:**
 * **Angular:** Primary framework for both the Admin Panel and the Customer Web application.
