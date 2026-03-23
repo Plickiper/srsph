@@ -1,4 +1,4 @@
-.product-card {
+cd .product-card {
   background: var(--secondary-black);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -8,7 +8,7 @@
   cursor: pointer;
   width: 100%;
   max-width: 200px;
-  min-height: 350px; /* Ensure consistent card height */
+  min-height: 350px;
   display: flex;
   flex-direction: column;
 }
@@ -275,11 +275,11 @@
 
 .stock-value {
   font-weight: 600;
-  
+
   &.in-stock {
     color: #10b981;
   }
-  
+
   &.out-of-stock {
     color: #ef4444;
   }

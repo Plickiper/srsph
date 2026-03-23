@@ -15,32 +15,8 @@ import { LoadingComponent } from './components/loading/loading.component';
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, RouterOutlet, NavbarComponent, FooterComponent, NotificationComponent, LoadingComponent],
-  template: `
-    <div class="app-container">
-      <app-navbar></app-navbar>
-      <main class="main-content">
-        <router-outlet></router-outlet>
-      </main>
-      <app-footer></app-footer>
-      <app-notification></app-notification>
-      <app-loading></app-loading>
-    </div>
-  `,
-  styles: [`
-    .app-container {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%) !important;
-    }
-
-    .main-content {
-      flex: 1;
-      margin-bottom: 0;
-      background: linear-gradient(145deg, #0f0f0f 0%, #1a1a1a 100%) !important;
-      min-height: calc(100vh - 80px) !important;
-    }
-  `]
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.scss'
 })
 export class AppComponent extends BaseComponent implements OnInit, OnDestroy {
   title = 'Sun Racing Spirit';

@@ -7,6 +7,7 @@ import { CartItem, User } from '../../models/product.model';
 import { FormsModule } from '@angular/forms';
 import { OrdersService } from '../../services/orders.service';
 import { LoadingService } from '../../core/loading.service';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-checkout',
@@ -34,7 +35,6 @@ export class CheckoutComponent implements OnInit {
   };
   // Payment method (no default selection)
   paymentMethod: 'COD' | 'GCASH' | null = null;
-  // Loading state
   isPlacingOrder = false;
 
   constructor(
@@ -42,7 +42,8 @@ export class CheckoutComponent implements OnInit {
     private authService: AuthService,
     private router: Router,
     private ordersService: OrdersService,
-    private loadingService: LoadingService
+    private loadingService: LoadingService,
+    private notificationService: NotificationService
   ) {}
 
   hasVariants(product: any): boolean {
@@ -57,9 +58,7 @@ export class CheckoutComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Safe inline SVG placeholder (encoded) to avoid template quoting issues
     this.placeholderImg = 'data:image/svg+xml;utf8,%3Csvg xmlns%3D"http%3A//www.w3.org/2000/svg" width%3D"80" height%3D"80"/%3E';
-    // Load user
     // Coerce to model type by mapping relevant fields
     const u: any = this.authService.getCurrentUser();
     this.user = u ? {
@@ -80,6 +79,12 @@ export class CheckoutComponent implements OnInit {
       createdAt: u.createdAt,
       updatedAt: u.updatedAt
     } : null;
+
+    // Check if user is authenticated
+    if (!this.user) {
+      this.router.navigate(['/login']);
+      return;
+    }
 
     // Prefill delivery info from user profile when available
     if (this.user) {
@@ -114,11 +119,24 @@ export class CheckoutComponent implements OnInit {
   // Create order then navigate to My Orders
   placeOrder(): void {
     if (!this.user || !this.paymentMethod || this.isPlacingOrder) return;
-    
+
+    // Validate profile completion
+    if (!this.isProfileComplete()) {
+      this.notificationService.error('Please update your profile to checkout the product.');
+      this.router.navigate(['/profile']);
+      return;
+    }
+
+    // Validate delivery information
+    if (!this.isDeliveryInfoComplete()) {
+      this.notificationService.error('Please update your profile to checkout the product.');
+      return;
+    }
+
     // Set loading state
     this.isPlacingOrder = true;
     this.loadingService.show();
-    
+
     // Map items with correct field names for backend
     const items = this.items.map(i => ({
       productId: i.productId,
@@ -126,7 +144,7 @@ export class CheckoutComponent implements OnInit {
       price: i.price,
       compatibility: i.size || i.compatibility || 'Universal' // Map size to compatibility
     }));
-    
+
     // Map delivery info to backend expected fields
     const payload = {
       userId: this.user.id,
@@ -139,13 +157,13 @@ export class CheckoutComponent implements OnInit {
       country: this.delivery.country || 'Philippines',
       phoneNumber: this.delivery.phoneNumber || this.user.phoneNumber || ''
     };
-    
+
     console.log('Creating order with payload:', payload); // Debug log
-    
+
     this.ordersService.createOrder(payload).subscribe({
       next: (response) => {
         console.log('Order created successfully:', response); // Debug log
-        
+
         // Check if the response indicates success
         if (response && response.success) {
           try {
@@ -179,6 +197,70 @@ export class CheckoutComponent implements OnInit {
     if (this.paymentMethod === 'COD') return 'Cash on Delivery';
     if (this.paymentMethod === 'GCASH') return 'GCash';
     return '';
+  }
+
+  // Profile validation methods
+  isProfileComplete(): boolean {
+    if (!this.user) return false;
+
+    return !!(
+      this.user.firstName &&
+      this.user.lastName &&
+      this.user.email &&
+      this.user.phoneNumber &&
+      this.user.address &&
+      this.user.city &&
+      this.user.state &&
+      this.user.postalCode &&
+      this.user.country
+    );
+  }
+
+  isDeliveryInfoComplete(): boolean {
+    return !!(
+      this.delivery.fullName &&
+      this.delivery.phoneNumber &&
+      this.delivery.address &&
+      this.delivery.city &&
+      this.delivery.state &&
+      this.delivery.postalCode &&
+      this.delivery.country
+    );
+  }
+
+  getMissingProfileFields(): string[] {
+    const missing: string[] = [];
+    if (!this.user) return ['User not found'];
+
+    if (!this.user.firstName) missing.push('First Name');
+    if (!this.user.lastName) missing.push('Last Name');
+    if (!this.user.email) missing.push('Email');
+    if (!this.user.phoneNumber) missing.push('Phone Number');
+    if (!this.user.address) missing.push('Address');
+    if (!this.user.city) missing.push('City');
+    if (!this.user.state) missing.push('State');
+    if (!this.user.postalCode) missing.push('Postal Code');
+    if (!this.user.country) missing.push('Country');
+
+    return missing;
+  }
+
+  getMissingDeliveryFields(): string[] {
+    const missing: string[] = [];
+
+    if (!this.delivery.fullName) missing.push('Full Name');
+    if (!this.delivery.phoneNumber) missing.push('Phone Number');
+    if (!this.delivery.address) missing.push('Address');
+    if (!this.delivery.city) missing.push('City');
+    if (!this.delivery.state) missing.push('State');
+    if (!this.delivery.postalCode) missing.push('Postal Code');
+    if (!this.delivery.country) missing.push('Country');
+
+    return missing;
+  }
+
+  canPlaceOrder(): boolean {
+    return this.isProfileComplete() && this.isDeliveryInfoComplete() && !!this.paymentMethod && !this.isPlacingOrder;
   }
 
   onPlaceOrder(): void {
