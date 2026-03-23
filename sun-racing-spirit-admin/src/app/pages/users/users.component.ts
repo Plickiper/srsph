@@ -80,7 +80,7 @@ import { AdminAuthService, AdminUser, CreateStaffRequest, UpdateStaffRequest } f
                 <span class="status-badge" [class.active]="user.isActive" [class.inactive]="!user.isActive">
                   {{ user.isActive ? 'Active' : 'Inactive' }}
                 </span>
-                <span *ngIf="user.isActive" class="online-indicator" [class.online]="isUserOnline(user)" [class.offline]="!isUserOnline(user)">
+                <span class="online-indicator" [class.online]="isUserOnline(user)" [class.offline]="!isUserOnline(user)">
                   <div class="status-dot"></div>
                   {{ isUserOnline(user) ? 'Online' : 'Offline' }}
                 </span>
@@ -1510,12 +1510,23 @@ export class UsersComponent implements OnInit, OnDestroy {
     // For other users, check if they logged in recently and haven't logged out
     if (!user.lastLoginAt) return false;
     
-    const lastLogin = new Date(user.lastLoginAt);
+    const lastLogin = this.parseServerDate(user.lastLoginAt);
     const now = new Date();
     const diffMinutes = (now.getTime() - lastLogin.getTime()) / (1000 * 60);
     
     // Consider online if logged in within last 5 minutes (shorter window for accuracy)
     return diffMinutes < 5;
+  }
+
+  // Robust server date parsing: handle values without timezone by assuming UTC
+  private parseServerDate(dateString: string | undefined): Date {
+    if (!dateString) return new Date(0);
+    // If the string already has a timezone designator (Z or +/-), use as-is
+    if (/Z|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+      return new Date(dateString);
+    }
+    // Otherwise, treat it as UTC to avoid client timezone shifts from LocalDateTime serialization
+    return new Date(dateString + 'Z');
   }
 
 }
